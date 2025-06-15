@@ -2,7 +2,7 @@ import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
 import store from "./store";
-import { io } from "socket.io-client"; // This line should appear ONLY ONCE
+import { io } from "socket.io-client"; // Import Socket.IO client
 
 const app = createApp(App);
 
@@ -13,16 +13,13 @@ const socket = io("https://powerlifting-meet-backend.onrender.com");
 // Make socket available globally in Vue components
 app.config.globalProperties.$socket = socket;
 
-// Optional: Log connection status
+// Optional: Log connection status - removed console.log statements for production build
 socket.on("connect", () => {
-  console.log("Frontend connected to backend Socket.IO");
+  // console.log("Frontend connected to backend Socket.IO");
 });
 
 socket.on("disconnect", () => {
-  console.log("Frontend disconnected from backend Socket.IO");
+  // console.log("Frontend disconnected from backend Socket.IO");
 });
 
 app.use(store).use(router).mount("#app");
-
-
-
