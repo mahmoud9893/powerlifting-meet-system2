@@ -127,7 +127,7 @@ export default {
       }
 
       try {
-        const response = await fetch("http://192.168.1.21:5000/judge_login", {
+        const response = await fetch("https://powerlifting-meet-backend.onrender.com/judge_login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -172,7 +172,7 @@ export default {
     // Function to fetch the current active lift
     const fetchCurrentLift = async () => {
       try {
-        const response = await fetch("http://192.168.1.21:5000/current_lift");
+        const response = await fetch("https://powerlifting-meet-backend.onrender.com/current_lift");
         if (response.ok) {
           const data = await response.json();
           currentLift.value = data;
@@ -209,7 +209,7 @@ export default {
           score: score, // true for good, false for bad
         };
 
-        const response = await fetch("http://192.168.1.21:5000/submit_score", {
+        const response = await fetch("https://powerlifting-meet-backend.onrender.com/submit_score", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -255,7 +255,7 @@ export default {
     const connectSocket = () => {
       if (socket && socket.connected) return; // Already connected
 
-      socket = io("http://192.168.1.21:5000");
+      socket = io("https://powerlifting-meet-backend.onrender.com");
 
       socket.on("connect", () => {
         console.log("Judge App connected to backend Socket.IO");
@@ -454,6 +454,7 @@ h1 {
   align-items: center;
 }
 
+
 .current-lift-card {
   background-color: #34495e; /* Slightly lighter dark background */
   border-radius: 15px;
@@ -484,8 +485,7 @@ h1 {
   margin-bottom: 15px;
 }
 
-.lift-type {
-  /* New style for lift type */
+.lift-type { /* New style for lift type */
   font-size: 2.2em;
   font-weight: bold;
   color: #1abc9c; /* Turquoise */
