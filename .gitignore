@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.Python
+.env
+venv/
+.ipynb_checkpoints
+
+# Database
+*.db
+*.sqlite3
+/instance/
+
+# Data files
+*.xlsx
+/backups/
