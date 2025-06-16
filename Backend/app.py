@@ -1,4 +1,4 @@
-# Final, FINAL fix attempt - [Your Initials] [Date] - Ensuring no @before_first_request
+# MBR - DEFINITIVE FIX: REMOVED @app.before_first_request, using Flask-SQLAlchemy - June 17, 2025
 import os
 import json
 from datetime import datetime, date
@@ -8,24 +8,27 @@ from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import pandas as pd
 from io import BytesIO
+from sqlalchemy import inspect # Import inspect for checking table existence
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 
 # Configure SQLAlchemy for PostgreSQL using an environment variable
+# If DATABASE_URL is not set (e.g., during local development), it falls back to SQLite.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'powerlifting_meet.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-CORS(app) # Enable CORS for all HTTP routes
-
 # Explicitly allow your Netlify frontend domain for Socket.IO
 # Keep localhost:8080 for local frontend development
+# message_queue=None is important for Cloud Run/Render's stateless nature without a separate Redis/RabbitMQ.
 socketio = SocketIO(app, cors_allowed_origins=[
     "https://powerlifting-meet-system26.netlify.app", # Your Netlify domain
-    "http://localhost:8080"
-]) # Enable CORS for SocketIO
+    "http://localhost:8080",
+    "http://127.0.0.1:8080", # Also common for local
+    "*" # Consider making this more restrictive in production
+], message_queue=None, async_mode='eventlet') # Ensure eventlet is used for async
 
 # --- Global Meet State ---
 current_meet_state = {
@@ -49,6 +52,7 @@ class MeetState(db.Model):
     current_lift_type = db.Column(db.String(20), default='squat')
     current_active_lift_id = db.Column(db.Integer, db.ForeignKey('lift_attempt.id'), nullable=True)
     current_attempt_number = db.Column(db.Integer, default=1)
+    is_meet_active = db.Column(db.Boolean, default=True) # Added for explicit meet start/stop
 
     # Relationship to LiftAttempt for easier access
     active_lift = db.relationship('LiftAttempt', foreign_keys=[current_active_lift_id], lazy=True)
@@ -58,7 +62,8 @@ class MeetState(db.Model):
             'id': self.id,
             'current_lift_type': self.current_lift_type,
             'current_active_lift_id': self.current_active_lift_id,
-            'current_attempt_number': self.current_attempt_number
+            'current_attempt_number': self.current_attempt_number,
+            'is_meet_active': self.is_meet_active
         }
 
 class AgeClass(db.Model):
@@ -199,28 +204,35 @@ class LiftAttempt(db.Model):
     overall_result = db.Column(db.Boolean, nullable=True) # True for good lift, False for no lift
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def __repr__(self):
+        return f"<LiftAttempt {self.lifter_id} - {self.lift_type} {self.weight_lifted}kg - Attempt {self.attempt_number}>"
+
     def calculate_overall_result(self):
         scores = [self.judge1_score, self.judge2_score, self.judge3_score]
         actual_scores = [s for s in scores if s is not None]
 
-        if len(actual_scores) < 3:
+        if len(actual_scores) < 3: # Need all 3 scores to determine overall result
             self.overall_result = None
-            return False
+            return False # Not enough scores yet
 
         good_lifts = sum(1 for s in actual_scores if s is True)
-        self.overall_result = True if good_lifts >= 2 else False
-        return True
+        
+        if good_lifts >= 2:
+            self.overall_result = True
+        else:
+            self.overall_result = False
+        return True # Overall result has been determined
 
     def to_dict(self):
-        lifter = Lifter.query.get(self.lifter_id)
+        lifter = Lifter.query.get(self.lifter_id) # Fetch lifter to get details
         return {
             'id': self.id,
-            'lifter_id': self.lifter_id,
+            'lifter_id': self.lifer_id,
             'lifter_name': lifter.name if lifter else 'Unknown',
             'lifter_id_number': lifter.lifter_id_number if lifter else 'Unknown',
             'gender': lifter.gender if lifter else 'Unknown',
             'actual_weight': lifter.actual_weight if lifter else 'Unknown',
-            'weight_class_name': lifter.primary_weight_class.name if lifter and lifter.primary_weight_class else 'N/A',
+            'weight_class_name': lifter.primary_weight_class.name if lifter and lifter.primary_weight_class else 'N/A', # Use primary
             'lift_type': self.lift_type,
             'weight_lifted': self.weight_lifted,
             'attempt_number': self.attempt_number,
@@ -229,30 +241,41 @@ class LiftAttempt(db.Model):
             'judge2_score': self.judge2_score,
             'judge3_score': self.judge3_score,
             'overall_result': self.overall_result,
-            'timestamp': self.timestamp.isoformat()
+            'timestamp': self.timestamp.isoformat() # Include timestamp
         }
 
 # --- Database Initialization & Dummy Data ---
-# All database initialization and dummy data creation should now run directly
-# within the app.app_context() block, without the deprecated @app.before_first_request decorator.
+# This block runs within the application context, ensuring Flask-SQLAlchemy is properly initialized.
+# It replaces the deprecated @app.before_first_request decorator.
 with app.app_context():
-    db.create_all()
+    # Check if tables exist before creating.
+    inspector = inspect(db.engine)
+    
+    # Only create tables and seed data if the 'lifter' table (or any other essential table) doesn't exist.
+    if not inspector.has_table("lifter") or \
+       not inspector.has_table("weight_class") or \
+       not inspector.has_table("age_class") or \
+       not inspector.has_table("lift_attempt") or \
+       not inspector.has_table("meet_state"):
+        db.create_all()
+        print("Database tables created.")
 
-    # Initialize MeetState (ensure only one row)
-    if MeetState.query.count() == 0:
-        db.session.add(MeetState(id=1, current_lift_type='squat', current_attempt_number=1))
-        db.session.commit()
+        # Initialize MeetState (ensure only one row)
+        if MeetState.query.count() == 0:
+            db.session.add(MeetState(id=1, current_lift_type='squat', current_attempt_number=1, is_meet_active=True))
+            db.session.commit()
+            print("Initial MeetState created.")
 
-    if WeightClass.query.count() == 0:
-        print("Adding dummy weight classes...")
-        wc_m83 = WeightClass(name="Men's 83kg", min_weight=74.01, max_weight=83.0, gender="Male")
-        wc_m93 = WeightClass(name="Men's 93kg", min_weight=83.01, max_weight=93.0, gender="Male")
-        wc_m105 = WeightClass(name="Men's 105kg", min_weight=93.01, max_weight=105.0, gender="Male")
-        wc_w69 = WeightClass(name="Women's 69kg", min_weight=63.01, max_weight=69.0, gender="Female")
-        wc_w76 = WeightClass(name="Women's 76kg", min_weight=69.01, max_weight=76.0, gender="Female")
-        db.session.add_all([wc_m83, wc_m93, wc_m105, wc_w69, wc_w76])
-        db.session.commit()
-        print("Dummy weight classes added.")
+        if WeightClass.query.count() == 0:
+            print("Adding dummy weight classes...")
+            wc_m83 = WeightClass(name="Men's 83kg", min_weight=74.01, max_weight=83.0, gender="Male")
+            wc_m93 = WeightClass(name="Men's 93kg", min_weight=83.01, max_weight=93.0, gender="Male")
+            wc_m105 = WeightClass(name="Men's 105kg", min_weight=93.01, max_weight=105.0, gender="Male")
+            wc_w69 = WeightClass(name="Women's 69kg", min_weight=63.01, max_weight=69.0, gender="Female")
+            wc_w76 = WeightClass(name="Women's 76kg", min_weight=69.01, max_weight=76.0, gender="Female")
+            db.session.add_all([wc_m83, wc_m93, wc_m105, wc_w69, wc_w76])
+            db.session.commit()
+            print("Dummy weight classes added.")
 
     if AgeClass.query.count() == 0:
         print("Adding dummy age classes...")
@@ -269,8 +292,8 @@ with app.app_context():
         
         lifter1 = Lifter(name="John Doe", gender="Male", lifter_id_number="JD001", actual_weight=82.5, birth_date=date(2000, 5, 10))
         db.session.add(lifter1)
-        db.session.commit()
-        lifter1.assign_primary_classes()
+        db.session.commit() # Commit to get ID for primary class assignment
+        lifter1.assign_primary_classes() # Assign classes after lifter is in session
         db.session.commit()
 
         lifter2 = Lifter(name="Jane Smith", gender="Female", lifter_id_number="JS002", actual_weight=68.0, birth_date=date(2002, 1, 15))
@@ -283,12 +306,12 @@ with app.app_context():
         db.session.add(lifter3)
         db.session.commit()
         lifter3.assign_primary_classes()
-        
+        db.session.commit()
         # Add Mike to an additional age class (e.g., Open, if applicable)
         open_ac = AgeClass.query.filter_by(name="Open (24-39)").first()
         if open_ac:
             lifter3.additional_age_classes.append(open_ac)
-        db.session.commit()
+            db.session.commit()
 
 
         lift_types = ['squat', 'bench', 'deadlift']
@@ -301,17 +324,20 @@ with app.app_context():
         for lifter in [lifter1, lifter2, lifter3]:
             opener_weights = opener_weights_map[lifter.lifter_id_number]
             for lift_type in lift_types:
-                for i in range(1, 4):
+                for i in range(1, 4): # 3 attempts for each lift type
                     new_lift_attempt = LiftAttempt(
                         lifter_id=lifter.id,
                         lift_type=lift_type,
-                        weight_lifted=opener_weights[lift_type] + (i - 1) * 5,
+                        weight_lifted=opener_weights[lift_type] + (i - 1) * 5, # Increment by 5kg for subsequent attempts
                         attempt_number=i,
                         status='pending'
                     )
                     db.session.add(new_lift_attempt)
-        db.session.commit()
-        print("Dummy lifters and attempts added.")
+            db.session.commit()
+            print("Dummy lifters and attempts added.")
+    else:
+        print("Database tables already exist. Skipping creation and seeding.")
+
 
 # --- API Endpoints ---
 
@@ -329,6 +355,7 @@ def judge_login():
     else:
         return jsonify({"error": "Invalid PIN"}), 401
 
+
 @app.route('/meet_state', methods=['GET'])
 def get_meet_state_endpoint():
     meet_state_obj = MeetState.query.get(1)
@@ -345,7 +372,7 @@ def set_meet_state_endpoint():
 
     if 'current_lift_type' in data and data['current_lift_type'] in ['squat', 'bench', 'deadlift']:
         meet_state_obj.current_lift_type = data['current_lift_type']
-        meet_state_obj.current_attempt_number = 1
+        meet_state_obj.current_attempt_number = 1 
         meet_state_obj.current_active_lift_id = None
         db.session.commit()
         socketio.emit('meet_state_updated', meet_state_obj.to_dict())
@@ -369,12 +396,12 @@ def advance_attempt_endpoint():
     return jsonify({"error": "Cannot advance past 3rd attempt."}), 400
 
 @app.route('/weight_classes', methods=['GET'])
-def get_weight_classes():
+def get_weight_classes_endpoint():
     weight_classes = WeightClass.query.all()
     return jsonify([wc.to_dict() for wc in weight_classes])
 
 @app.route('/weight_classes', methods=['POST'])
-def add_weight_class():
+def add_weight_class_endpoint():
     data = request.get_json()
     name = data.get('name')
     min_weight = data.get('min_weight')
@@ -390,27 +417,23 @@ def add_weight_class():
     new_wc = WeightClass(name=name, min_weight=min_weight, max_weight=max_weight, gender=gender)
     db.session.add(new_wc)
     db.session.commit()
-    
-    # Re-assign primary weight classes for all lifters as new classes might affect assignments
     all_lifters = Lifter.query.all()
     for lifter in all_lifters:
         lifter.assign_primary_classes()
     db.session.commit()
-    socketio.emit('lifter_updated', None) # Notify frontends to re-fetch lifters
+    socketio.emit('lifter_updated', None)
     return jsonify(new_wc.to_dict()), 201
 
 @app.route('/weight_classes/<int:wc_id>', methods=['DELETE'])
-def delete_weight_class(wc_id):
+def delete_weight_class_endpoint(wc_id):
     wc = WeightClass.query.get(wc_id)
     if not wc:
         return jsonify({"message": "Weight class not found"}), 404
     
-    # Check if this is a primary weight class for any lifter
     lifters_with_primary_wc = Lifter.query.filter_by(primary_weight_class_id=wc_id).all()
     if lifters_with_primary_wc:
         return jsonify({"error": "Cannot delete primary weight class with assigned lifters. Reassign lifters first."}), 409
 
-    # Remove this class from any lifter's additional_weight_classes
     for lifter in Lifter.query.filter(Lifter.additional_weight_classes.any(WeightClass.id == wc_id)).all():
         lifter.additional_weight_classes.remove(wc)
     db.session.delete(wc)
@@ -419,12 +442,12 @@ def delete_weight_class(wc_id):
     return jsonify({"message": "Weight class deleted"}), 200
 
 @app.route('/age_classes', methods=['GET'])
-def get_age_classes():
+def get_age_classes_endpoint():
     age_classes = AgeClass.query.all()
     return jsonify([ac.to_dict() for ac in age_classes])
 
 @app.route('/age_classes', methods=['POST'])
-def add_age_class():
+def add_age_class_endpoint():
     data = request.get_json()
     name = data.get('name')
     min_age = data.get('min_age')
@@ -439,7 +462,6 @@ def add_age_class():
     new_ac = AgeClass(name=name, min_age=min_age, max_age=max_age)
     db.session.add(new_ac)
     db.session.commit()
-    
     all_lifters = Lifter.query.all()
     for lifter in all_lifters:
         lifter.assign_primary_classes()
@@ -448,7 +470,7 @@ def add_age_class():
     return jsonify(new_ac.to_dict()), 201
 
 @app.route('/age_classes/<int:ac_id>', methods=['DELETE'])
-def delete_age_class(ac_id):
+def delete_age_class_endpoint(ac_id):
     ac = AgeClass.query.get(ac_id)
     if not ac:
         return jsonify({"message": "Age class not found"}), 404
@@ -459,19 +481,18 @@ def delete_age_class(ac_id):
 
     for lifter in Lifter.query.filter(Lifter.additional_age_classes.any(AgeClass.id == ac_id)).all():
         lifter.additional_age_classes.remove(ac)
-
     db.session.delete(ac)
     db.session.commit()
     socketio.emit('lifter_updated', None)
     return jsonify({"message": "Age class deleted"}), 200
 
 @app.route('/lifters', methods=['GET'])
-def get_lifters():
+def get_lifters_endpoint():
     lifters = Lifter.query.all()
     return jsonify([l.to_dict() for l in lifters])
 
 @app.route('/lifters', methods=['POST'])
-def add_lifter():
+def add_lifter_endpoint():
     data = request.get_json()
     name = data.get('name')
     gender = data.get('gender')
@@ -492,7 +513,7 @@ def add_lifter():
     try:
         birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
     except ValueError:
-        return jsonify({"error": "Invalid birth_date format. Use Malhotra-MM-DD."}), 400
+        return jsonify({"error": "Invalid birth_date format. Use %Y-%m-%d."}), 400
 
     new_lifter = Lifter(
         name=name,
@@ -514,14 +535,11 @@ def add_lifter():
         'deadlift': opener_deadlift
     }
 
-    # This loop was referencing global lifter objects (lifter1, lifter2, lifter3)
-    # which are only available in the dummy data seeding, not for new lifters.
-    # It should iterate using the newly created 'new_lifter'.
-    for lift_type in lift_types: # Corrected loop: removed 'for lifter in [lifter1, lifter2, lifter3]:'
+    for lift_type in lift_types:
         for i in range(1, 4):
             initial_weight = opener_weights[lift_type] + (i - 1) * 5
             new_lift_attempt = LiftAttempt(
-                lifter_id=new_lifter.id, # Use new_lifter.id here
+                lifter_id=new_lifter.id,
                 lift_type=lift_type,
                 weight_lifted=initial_weight,
                 attempt_number=i,
@@ -549,7 +567,7 @@ def add_additional_weight_class(lifter_id):
         return jsonify({"error": "Cannot add primary weight class as an additional class."}), 400
 
     if lifter.primary_weight_class and wc.min_weight < lifter.primary_weight_class.min_weight:
-        return jsonify({"error": "Additional weight class must be strictly heavier or equal to the primary class."}), 400 # Changed to equal
+        return jsonify({"error": "Additional weight class must be strictly heavier or equal to the primary class."}), 400
 
     if wc not in lifter.additional_weight_classes:
         lifter.additional_weight_classes.append(wc)
@@ -593,7 +611,7 @@ def add_additional_age_class(lifter_id):
         return jsonify({"error": "Cannot add primary age class as an additional class."}), 400
     
     if lifter.primary_age_class and ac.min_age < lifter.primary_age_class.min_age:
-        return jsonify({"error": "Additional age class must be strictly older or equal to the primary class."}), 400 # Changed to equal
+        return jsonify({"error": "Additional age class must be strictly older or equal to the primary class."}), 400
 
     if ac not in lifter.additional_age_classes:
         lifter.additional_age_classes.append(ac)
@@ -628,7 +646,7 @@ def get_lifts():
     return jsonify([lift.to_dict() for lift in lifts])
 
 @app.route('/current_lift', methods=['GET'])
-def get_current_lift():
+def get_current_lift_endpoint():
     meet_state_obj = MeetState.query.get(1)
     if meet_state_obj and meet_state_obj.current_active_lift_id:
         active_lift = LiftAttempt.query.get(meet_state_obj.current_active_lift_id)
@@ -637,7 +655,7 @@ def get_current_lift():
     return jsonify({"message": "No active lift"}), 404
 
 @app.route('/set_active_lift', methods=['POST'])
-def set_active_lift():
+def set_active_lift_endpoint():
     data = request.get_json()
     lift_id = data.get('lift_id')
 
@@ -700,7 +718,7 @@ def set_active_lift():
     return jsonify(new_active.to_dict())
 
 @app.route('/submit_score', methods=['POST'])
-def submit_score():
+def submit_score_endpoint():
     data = request.get_json()
     lift_id = data.get('lift_id')
     judge_number = data.get('judge_number')
@@ -762,7 +780,7 @@ def get_lifter_attempts_endpoint(lifter_id):
     return jsonify([att.to_dict() for att in attempts])
 
 @app.route('/rankings', methods=['GET'])
-def get_rankings():
+def get_rankings_endpoint():
     all_lifters = Lifter.query.all()
     rankings_by_class = {}
 
@@ -847,7 +865,7 @@ def get_next_lift_in_queue_endpoint():
     return jsonify({"message": "No pending lifts in current queue for this lift type."}), 404
 
 @app.route('/export_meet_data', methods=['GET'])
-def export_meet_data():
+def export_meet_data_endpoint():
     try:
         backup_dir = os.path.join(basedir, 'backups')
         os.makedirs(backup_dir, exist_ok=True)
@@ -876,11 +894,9 @@ def export_meet_data():
                         (best_lifts.get('deadlift', 0) or 0)
             if total_sum > 0: lifter_dict['total'] = total_sum
 
-            # Flatten additional classes into strings for Excel
             lifter_dict['additional_weight_classes'] = ', '.join(lifter_dict['additional_weight_class_names'])
             lifter_dict['additional_age_classes'] = ', '.join(lifter_dict['additional_age_class_names'])
             
-            # Remove original JSON parsed lists
             del lifter_dict['additional_weight_class_names']
             del lifter_dict['additional_age_class_names']
             del lifter_dict['additional_weight_class_ids']
@@ -888,7 +904,6 @@ def export_meet_data():
 
             lifters_data_list.append(lifter_dict)
         
-        # Prepare lifts data with all judge scores and results
         lifts_data_list = []
         for lift in LiftAttempt.query.all():
             lift_dict = lift.to_dict()
