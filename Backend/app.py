@@ -1,3 +1,4 @@
+# Final, FINAL fix attempt - [Your Initials] [Date] - Ensuring no @before_first_request
 import os
 import json
 from datetime import datetime, date
