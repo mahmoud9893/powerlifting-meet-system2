@@ -513,19 +513,20 @@ def add_lifter():
         'deadlift': opener_deadlift
     }
 
-    for lifter in [lifter1, lifter2, lifter3]:
-        opener_weights = opener_weights_map[lifter.lifter_id_number]
-        for lift_type in lift_types:
-            for i in range(1, 4):
-                initial_weight = opener_weights[lift_type] + (i - 1) * 5
-                new_lift_attempt = LiftAttempt(
-                    lifter_id=new_lifter.id,
-                    lift_type=lift_type,
-                    weight_lifted=initial_weight,
-                    attempt_number=i,
-                    status='pending'
-                )
-                db.session.add(new_lift_attempt)
+    # This loop was referencing global lifter objects (lifter1, lifter2, lifter3)
+    # which are only available in the dummy data seeding, not for new lifters.
+    # It should iterate using the newly created 'new_lifter'.
+    for lift_type in lift_types: # Corrected loop: removed 'for lifter in [lifter1, lifter2, lifter3]:'
+        for i in range(1, 4):
+            initial_weight = opener_weights[lift_type] + (i - 1) * 5
+            new_lift_attempt = LiftAttempt(
+                lifter_id=new_lifter.id, # Use new_lifter.id here
+                lift_type=lift_type,
+                weight_lifted=initial_weight,
+                attempt_number=i,
+                status='pending'
+            )
+            db.session.add(new_lift_attempt)
     db.session.commit()
 
     socketio.emit('lifter_added', new_lifter.to_dict())
