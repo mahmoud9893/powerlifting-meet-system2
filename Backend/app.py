@@ -513,17 +513,19 @@ def add_lifter():
         'deadlift': opener_deadlift
     }
 
-    for lift_type in lift_types:
-        for i in range(1, 4):
-            initial_weight = opener_weights[lift_type] + (i - 1) * 5
-            new_lift_attempt = LiftAttempt(
-                lifter_id=new_lifter.id,
-                lift_type=lift_type,
-                weight_lifted=initial_weight,
-                attempt_number=i,
-                status='pending'
-            )
-            db.session.add(new_lift_attempt)
+    for lifter in [lifter1, lifter2, lifter3]:
+        opener_weights = opener_weights_map[lifter.lifter_id_number]
+        for lift_type in lift_types:
+            for i in range(1, 4):
+                initial_weight = opener_weights[lift_type] + (i - 1) * 5
+                new_lift_attempt = LiftAttempt(
+                    lifter_id=new_lifter.id,
+                    lift_type=lift_type,
+                    weight_lifted=initial_weight,
+                    attempt_number=i,
+                    status='pending'
+                )
+                db.session.add(new_lift_attempt)
     db.session.commit()
 
     socketio.emit('lifter_added', new_lifter.to_dict())
