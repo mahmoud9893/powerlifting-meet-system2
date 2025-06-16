@@ -119,7 +119,7 @@ export default {
 
     const fetchCurrentLift = async () => {
       try {
-        const response = await fetch("http://localhost:5000/current_lift");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/current_lift");
         if (response.ok) {
           const data = await response.json();
           currentLift.value = data;
@@ -138,7 +138,7 @@ export default {
     const fetchLifterAttempts = async (lifterId) => {
       try {
         const response = await fetch(
-          `http://localhost:5000/lifters/${lifterId}/attempts`
+          `process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/attempts`
         );
         if (response.ok) {
           const attempts = await response.json();
@@ -181,7 +181,7 @@ export default {
 
     const fetchMeetState = async () => {
       try {
-        const response = await fetch("http://localhost:5000/meet_state");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/meet_state");
         if (response.ok) {
           const data = await response.json();
           currentMeetState.value = data;
@@ -220,7 +220,7 @@ export default {
       fetchMeetState(); // Fetch initial meet state
 
       // Connect to Socket.IO
-      socket = io("http://localhost:5000");
+      socket = io("process.env.VUE_APP_BACKEND_API_URL");
 
       // Listen for active lift changes
       socket.on("active_lift_changed", (lift) => {

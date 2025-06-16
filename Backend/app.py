@@ -1,54 +1,70 @@
 import os
+import json
+from datetime import datetime, date
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
-from sqlalchemy.exc import IntegrityError
-# Add other necessary imports here, e.g., for pandas or openpyxl functions
 import pandas as pd
-# Assuming you have an initial data setup file or logic if needed, e.g., to load from Excel
+from io import BytesIO
+
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
-CORS(app) # Enable CORS for your Flask app
 
-# --- Database Configuration ---
-# The DATABASE_URL will be provided by Google Cloud Run as an environment variable.
-# If running locally without this env var set, it will fall back to SQLite for development.
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL',
-    'sqlite:///powerlifting_meet.db' # Fallback for local development if DATABASE_URL is not set
-)
+# Configure SQLAlchemy for PostgreSQL using an environment variable
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'powerlifting_meet.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-# Configure SocketIO to use 'eventlet' and allow all origins for testing.
-# For production, replace '*' with your specific frontend domain(s).
-# message_queue=None is important for Cloud Run's stateless nature without a separate Redis/RabbitMQ.
-socketio = SocketIO(app, cors_allowed_origins="*", message_queue=None, async_mode='eventlet')
+CORS(app) # Enable CORS for all HTTP routes
 
+# Explicitly allow your Netlify frontend domain for Socket.IO
+# Keep localhost:8080 for local frontend development
+socketio = SocketIO(app, cors_allowed_origins=[
+    "https://powerlifting-meet-system26.netlify.app", # Your Netlify domain
+    "http://localhost:8080"
+]) # Enable CORS for SocketIO
 
-# --- Define your SQLAlchemy Models (Lifter, LiftAttempt, WeightClass, AgeClass, MeetState) ---
-# Example:
-class WeightClass(db.Model):
-    __tablename__ = 'weight_classes'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
-    min_weight = db.Column(db.Float, nullable=True)
-    max_weight = db.Column(db.Float, nullable=True)
+# --- Global Meet State ---
+current_meet_state = {
+    'current_lift_type': 'squat',
+    'current_active_lift_id': None,
+    'current_attempt_number': 1
+}
+
+# --- Hardcoded Judge PINs (for demonstration purposes) ---
+JUDGE_PINS = {
+    "1234": 1, # Judge 1
+    "5678": 2, # Judge 2
+    "9012": 3  # Judge 3
+}
+
+# --- Database Models ---
+
+class MeetState(db.Model):
+    __tablename__ = 'meet_state'
+    id = db.Column(db.Integer, primary_key=True, default=1) # Ensure only one row
+    current_lift_type = db.Column(db.String(20), default='squat')
+    current_active_lift_id = db.Column(db.Integer, db.ForeignKey('lift_attempt.id'), nullable=True)
+    current_attempt_number = db.Column(db.Integer, default=1)
+
+    # Relationship to LiftAttempt for easier access
+    active_lift = db.relationship('LiftAttempt', foreign_keys=[current_active_lift_id], lazy=True)
 
     def to_dict(self):
         return {
             'id': self.id,
-            'name': self.name,
-            'min_weight': self.min_weight,
-            'max_weight': self.max_weight
+            'current_lift_type': self.current_lift_type,
+            'current_active_lift_id': self.current_active_lift_id,
+            'current_attempt_number': self.current_attempt_number
         }
 
 class AgeClass(db.Model):
-    __tablename__ = 'age_classes'
+    __tablename__ = 'age_class'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
-    min_age = db.Column(db.Integer, nullable=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    min_age = db.Column(db.Integer, nullable=False)
     max_age = db.Column(db.Integer, nullable=True)
 
     def to_dict(self):
@@ -59,613 +75,856 @@ class AgeClass(db.Model):
             'max_age': self.max_age
         }
 
-class Lifter(db.Model):
-    __tablename__ = 'lifters'
+class WeightClass(db.Model):
+    __tablename__ = 'weight_class'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
-    gender = db.Column(db.String(10), nullable=False) # 'Male', 'Female'
-    age = db.Column(db.Integer, nullable=False)
-    bodyweight = db.Column(db.Float, nullable=False)
-    weight_class_id = db.Column(db.Integer, db.ForeignKey('weight_classes.id'), nullable=True)
-    age_class_id = db.Column(db.Integer, db.ForeignKey('age_classes.id'), nullable=True)
-    entry_status = db.Column(db.String(50), default='Registered') # Registered, Active, Finished
-
-    weight_class = db.relationship('WeightClass', backref='lifters')
-    age_class = db.relationship('AgeClass', backref='lifters')
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    min_weight = db.Column(db.Float, nullable=False)
+    max_weight = db.Column(db.Float, nullable=True)
+    gender = db.Column(db.String(10), nullable=False) # 'Male', 'Female', 'Both'
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
+            'min_weight': self.min_weight,
+            'max_weight': self.max_weight,
+            'gender': self.gender
+        }
+
+# Association tables for many-to-many additional classes
+lifter_additional_weight_class = db.Table('lifter_additional_weight_class',
+    db.Column('lifter_id', db.Integer, db.ForeignKey('lifter.id'), primary_key=True),
+    db.Column('weight_class_id', db.Integer, db.ForeignKey('weight_class.id'), primary_key=True)
+)
+
+lifter_additional_age_class = db.Table('lifter_additional_age_class',
+    db.Column('lifter_id', db.Integer, db.ForeignKey('lifter.id'), primary_key=True),
+    db.Column('age_class_id', db.Integer, db.ForeignKey('age_class.id'), primary_key=True)
+)
+
+class Lifter(db.Model):
+    __tablename__ = 'lifter'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    gender = db.Column(db.String(10), nullable=False)
+    lifter_id_number = db.Column(db.String(50), unique=True, nullable=False)
+    actual_weight = db.Column(db.Float, nullable=False)
+    birth_date = db.Column(db.Date, nullable=False) # Store as Date object
+
+    # Primary class assignments (automatically determined)
+    primary_weight_class_id = db.Column(db.Integer, db.ForeignKey('weight_class.id'), nullable=True)
+    primary_weight_class = db.relationship('WeightClass', foreign_keys=[primary_weight_class_id], backref='primary_lifters', lazy=True)
+
+    primary_age_class_id = db.Column(db.Integer, db.ForeignKey('age_class.id'), nullable=True)
+    primary_age_class = db.relationship('AgeClass', foreign_keys=[primary_age_class_id], backref='primary_lifters', lazy=True)
+
+    # Many-to-many relationships for additional classes
+    additional_weight_classes = db.relationship(
+        'WeightClass',
+        secondary=lifter_additional_weight_class,
+        backref=db.backref('additional_lifters', lazy='dynamic')
+    )
+    additional_age_classes = db.relationship(
+        'AgeClass',
+        secondary=lifter_additional_age_class,
+        backref=db.backref('additional_lifters', lazy='dynamic')
+    )
+
+    lift_attempts = db.relationship('LiftAttempt', backref='lifter', lazy=True, cascade="all, delete-orphan")
+
+    def calculate_age(self):
+        today = date.today()
+        age = today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+        return age
+
+    def assign_primary_classes(self):
+        # Assign primary weight class
+        self.primary_weight_class = None # Clear existing assignment
+        suitable_wc = WeightClass.query.filter(
+            WeightClass.min_weight <= self.actual_weight,
+            (WeightClass.max_weight >= self.actual_weight) | (WeightClass.max_weight == None),
+            (WeightClass.gender == self.gender) | (WeightClass.gender == 'Both')
+        ).order_by(WeightClass.max_weight.asc()).first() # Prioritize smaller classes
+        if suitable_wc:
+            self.primary_weight_class = suitable_wc
+
+        # Assign primary age class
+        self.primary_age_class = None # Clear existing assignment
+        lifter_age = self.calculate_age()
+        if lifter_age is not None:
+            suitable_ac = AgeClass.query.filter(
+                AgeClass.min_age <= lifter_age,
+                (AgeClass.max_age >= lifter_age) | (AgeClass.max_age == None)
+            ).order_by(AgeClass.max_age.asc()).first() # Prioritize younger classes
+            if suitable_ac:
+                self.primary_age_class = suitable_ac
+
+    def to_dict(self):
+        additional_wc_names = [wc.name for wc in self.additional_weight_classes]
+        additional_ac_names = [ac.name for ac in self.additional_age_classes]
+        additional_wc_ids = [wc.id for wc in self.additional_weight_classes]
+        additional_ac_ids = [ac.id for ac in self.additional_age_classes]
+
+        return {
+            'id': self.id,
+            'name': self.name,
             'gender': self.gender,
-            'age': self.age,
-            'bodyweight': self.bodyweight,
-            'weight_class_id': self.weight_class_id,
-            'weight_class_name': self.weight_class.name if self.weight_class else None,
-            'age_class_id': self.age_class_id,
-            'age_class_name': self.age_class.name if self.age_class else None,
-            'entry_status': self.entry_status
+            'lifter_id_number': self.lifter_id_number,
+            'actual_weight': self.actual_weight,
+            'birth_date': self.birth_date.isoformat(), # Format date to string
+            'age': self.calculate_age(),
+            'primary_weight_class_id': self.primary_weight_class_id,
+            'primary_weight_class_name': self.primary_weight_class.name if self.primary_weight_class else 'N/A',
+            'primary_age_class_id': self.primary_age_class_id,
+            'primary_age_class_name': self.primary_age_class.name if self.primary_age_class else 'N/A',
+            'additional_weight_class_names': additional_wc_names,
+            'additional_age_class_names': additional_ac_names,
+            'additional_weight_class_ids': additional_wc_ids,
+            'additional_age_class_ids': additional_ac_ids,
         }
 
 class LiftAttempt(db.Model):
-    __tablename__ = 'lift_attempts'
+    __tablename__ = 'lift_attempt'
     id = db.Column(db.Integer, primary_key=True)
-    lifter_id = db.Column(db.Integer, db.ForeignKey('lifters.id'), nullable=False)
-    lift_type = db.Column(db.String(50), nullable=False) # 'Squat', 'Bench', 'Deadlift'
-    attempt_number = db.Column(db.Integer, nullable=False) # 1, 2, 3
-    weight = db.Column(db.Float, nullable=False)
-    score_status = db.Column(db.String(50), default='Pending') # 'Pending', 'Success', 'Fail'
-    judge_scores = db.Column(db.JSON, default=lambda: [False, False, False]) # [J1_pass, J2_pass, J3_pass]
-    time_stamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    lifter_id = db.Column(db.Integer, db.ForeignKey('lifter.id'), nullable=False)
+    lift_type = db.Column(db.String(20), nullable=False) # 'squat', 'bench', 'deadlift'
+    weight_lifted = db.Column(db.Float, nullable=False)
+    attempt_number = db.Column(db.Integer, nullable=False) # 1st, 2nd, 3rd attempt
+    status = db.Column(db.String(20), default='pending') # pending, active, completed
+    judge1_score = db.Column(db.Boolean, nullable=True) # True for good, False for bad, None for not scored
+    judge2_score = db.Column(db.Boolean, nullable=True)
+    judge3_score = db.Column(db.Boolean, nullable=True)
+    overall_result = db.Column(db.Boolean, nullable=True) # True for good lift, False for no lift
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-    lifter = db.relationship('Lifter', backref='lift_attempts')
+    def calculate_overall_result(self):
+        scores = [self.judge1_score, self.judge2_score, self.judge3_score]
+        actual_scores = [s for s in scores if s is not None]
+
+        if len(actual_scores) < 3:
+            self.overall_result = None
+            return False
+
+        good_lifts = sum(1 for s in actual_scores if s is True)
+        self.overall_result = True if good_lifts >= 2 else False
+        return True
 
     def to_dict(self):
+        lifter = Lifter.query.get(self.lifter_id)
         return {
             'id': self.id,
             'lifter_id': self.lifter_id,
-            'lifter_name': self.lifter.name if self.lifter else None,
+            'lifter_name': lifter.name if lifter else 'Unknown',
+            'lifter_id_number': lifter.lifter_id_number if lifter else 'Unknown',
+            'gender': lifter.gender if lifter else 'Unknown',
+            'actual_weight': lifter.actual_weight if lifter else 'Unknown',
+            'weight_class_name': lifter.primary_weight_class.name if lifter and lifter.primary_weight_class else 'N/A',
             'lift_type': self.lift_type,
+            'weight_lifted': self.weight_lifted,
             'attempt_number': self.attempt_number,
-            'weight': self.weight,
-            'score_status': self.score_status,
-            'judge_scores': self.judge_scores,
-            'time_stamp': self.time_stamp.isoformat() if self.time_stamp else None
+            'status': self.status,
+            'judge1_score': self.judge1_score,
+            'judge2_score': self.judge2_score,
+            'judge3_score': self.judge3_score,
+            'overall_result': self.overall_result,
+            'timestamp': self.timestamp.isoformat()
         }
 
-class MeetState(db.Model):
-    __tablename__ = 'meet_state'
-    id = db.Column(db.Integer, primary_key=True)
-    current_lifter_id = db.Column(db.Integer, db.ForeignKey('lifters.id'), nullable=True)
-    current_lift_type = db.Column(db.String(50), nullable=True)
-    current_attempt_number = db.Column(db.Integer, nullable=True)
-    is_meet_active = db.Column(db.Boolean, default=False)
+# --- Database Initialization & Dummy Data ---
+# All database initialization and dummy data creation should now run directly
+# within the app.app_context() block, without the deprecated @app.before_first_request decorator.
+with app.app_context():
+    db.create_all()
 
-    current_lifter = db.relationship('Lifter', foreign_keys=[current_lifter_id])
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'current_lifter_id': self.current_lifter_id,
-            'current_lifter_name': self.current_lifter.name if self.current_lifter else None,
-            'current_lift_type': self.current_lift_type,
-            'current_attempt_number': self.current_attempt_number,
-            'is_meet_active': self.is_meet_active
-        }
-
-# --- Database Initialization (only runs if tables don't exist) ---
-@app.before_first_request
-def create_tables_and_seed_data():
-    with app.app_context():
-        # Check if tables exist. This is a simple check.
-        # For production, consider Flask-Migrate for robust migrations.
-        inspector = db.inspect(db.engine)
-        if not inspector.has_table("lifters") or \
-           not inspector.has_table("weight_classes") or \
-           not inspector.has_table("age_classes") or \
-           not inspector.has_table("lift_attempts") or \
-           not inspector.has_table("meet_state"):
-            db.create_all()
-            print("Database tables created.")
-
-            # Seed initial meet state
-            if not MeetState.query.first():
-                initial_state = MeetState(is_meet_active=False)
-                db.session.add(initial_state)
-                db.session.commit()
-                print("Initial MeetState created.")
-            
-            # Seed initial weight and age classes (example data)
-            if not WeightClass.query.first():
-                weight_classes_data = [
-                    {'name': 'Men\'s 59kg', 'min_weight': 53.01, 'max_weight': 59.0},
-                    {'name': 'Men\'s 66kg', 'min_weight': 59.01, 'max_weight': 66.0},
-                    {'name': 'Men\'s 74kg', 'min_weight': 66.01, 'max_weight': 74.0},
-                    {'name': 'Men\'s 83kg', 'min_weight': 74.01, 'max_weight': 83.0},
-                    {'name': 'Men\'s 93kg', 'min_weight': 83.01, 'max_weight': 93.0},
-                    {'name': 'Men\'s 105kg', 'min_weight': 93.01, 'max_weight': 105.0},
-                    {'name': 'Men\'s 120kg', 'min_weight': 105.01, 'max_weight': 120.0},
-                    {'name': 'Men\'s 120+kg', 'min_weight': 120.01, 'max_weight': None},
-                    {'name': 'Women\'s 47kg', 'min_weight': None, 'max_weight': 47.0},
-                    {'name': 'Women\'s 52kg', 'min_weight': 47.01, 'max_weight': 52.0},
-                    {'name': 'Women\'s 57kg', 'min_weight': 52.01, 'max_weight': 57.0},
-                    {'name': 'Women\'s 63kg', 'min_weight': 57.01, 'max_weight': 63.0},
-                    {'name': 'Women\'s 69kg', 'min_weight': 63.01, 'max_weight': 69.0},
-                    {'name': 'Women\'s 76kg', 'min_weight': 69.01, 'max_weight': 76.0},
-                    {'name': 'Women\'s 84kg', 'min_weight': 76.01, 'max_weight': 84.0},
-                    {'name': 'Women\'s 84+kg', 'min_weight': 84.01, 'max_weight': None}
-                ]
-                for wc_data in weight_classes_data:
-                    db.session.add(WeightClass(**wc_data))
-                db.session.commit()
-                print("Weight classes seeded.")
-            
-            if not AgeClass.query.first():
-                age_classes_data = [
-                    {'name': 'Sub-Junior (14-18)', 'min_age': 14, 'max_age': 18},
-                    {'name': 'Junior (19-23)', 'min_age': 19, 'max_age': 23},
-                    {'name': 'Open (24-39)', 'min_age': 24, 'max_age': 39},
-                    {'name': 'Masters I (40-49)', 'min_age': 40, 'max_age': 49},
-                    {'name': 'Masters II (50-59)', 'min_age': 50, 'max_age': 59},
-                    {'name': 'Masters III (60-69)', 'min_age': 60, 'max_age': 69},
-                    {'name': 'Masters IV (70+)', 'min_age': 70, 'max_age': None}
-                ]
-                for ac_data in age_classes_data:
-                    db.session.add(AgeClass(**ac_data))
-                db.session.commit()
-                print("Age classes seeded.")
-
-        else:
-            print("Database tables already exist.")
-
-
-# --- API Routes ---
-
-# Test Route
-@app.route('/')
-def hello_world():
-    return jsonify({"message": "Powerlifting Backend is running!"})
-
-# Lifter Management
-@app.route('/lifters', methods=['POST'])
-def add_lifter():
-    data = request.json
-    name = data.get('name')
-    gender = data.get('gender')
-    age = data.get('age')
-    bodyweight = data.get('bodyweight')
-
-    if not all([name, gender, age, bodyweight]):
-        return jsonify({"error": "Missing lifter data"}), 400
-
-    # Determine weight class based on gender and bodyweight
-    weight_class = None
-    weight_classes_query = WeightClass.query.filter(WeightClass.name.like(f"{gender[0]}%")) # Assuming gender starts with M/W
-    
-    if gender == 'Male':
-        weight_classes_query = WeightClass.query.filter(WeightClass.name.like('Men%'))
-    elif gender == 'Female':
-        weight_classes_query = WeightClass.query.filter(WeightClass.name.like('Women%'))
-    
-    weight_classes_for_gender = weight_classes_query.all()
-
-    for wc in weight_classes_for_gender:
-        if wc.min_weight is not None and wc.max_weight is not None:
-            if wc.min_weight < bodyweight <= wc.max_weight:
-                weight_class = wc
-                break
-        elif wc.min_weight is not None and wc.max_weight is None: # e.g., 120+kg
-            if bodyweight > wc.min_weight:
-                weight_class = wc
-                break
-        elif wc.min_weight is None and wc.max_weight is not None: # e.g., 47kg
-            if bodyweight <= wc.max_weight:
-                weight_class = wc
-                break
-    
-    if not weight_class:
-        return jsonify({"error": "Could not determine weight class for provided bodyweight and gender"}), 400
-
-    # Determine age class based on age
-    age_class = None
-    age_classes = AgeClass.query.all()
-    for ac in age_classes:
-        if ac.min_age is not None and ac.max_age is not None:
-            if ac.min_age <= age <= ac.max_age:
-                age_class = ac
-                break
-        elif ac.min_age is not None and ac.max_age is None: # e.g., 70+
-            if age >= ac.min_age:
-                age_class = ac
-                break
-    
-    if not age_class:
-        return jsonify({"error": "Could not determine age class for provided age"}), 400
-
-    try:
-        new_lifter = Lifter(
-            name=name,
-            gender=gender,
-            age=age,
-            bodyweight=bodyweight,
-            weight_class_id=weight_class.id,
-            age_class_id=age_class.id
-        )
-        db.session.add(new_lifter)
+    # Initialize MeetState (ensure only one row)
+    if MeetState.query.count() == 0:
+        db.session.add(MeetState(id=1, current_lift_type='squat', current_attempt_number=1))
         db.session.commit()
-        return jsonify(new_lifter.to_dict()), 201
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({"error": "Lifter with this name already exists or database error"}), 409
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
+    if WeightClass.query.count() == 0:
+        print("Adding dummy weight classes...")
+        wc_m83 = WeightClass(name="Men's 83kg", min_weight=74.01, max_weight=83.0, gender="Male")
+        wc_m93 = WeightClass(name="Men's 93kg", min_weight=83.01, max_weight=93.0, gender="Male")
+        wc_m105 = WeightClass(name="Men's 105kg", min_weight=93.01, max_weight=105.0, gender="Male")
+        wc_w69 = WeightClass(name="Women's 69kg", min_weight=63.01, max_weight=69.0, gender="Female")
+        wc_w76 = WeightClass(name="Women's 76kg", min_weight=69.01, max_weight=76.0, gender="Female")
+        db.session.add_all([wc_m83, wc_m93, wc_m105, wc_w69, wc_w76])
+        db.session.commit()
+        print("Dummy weight classes added.")
+
+    if AgeClass.query.count() == 0:
+        print("Adding dummy age classes...")
+        ac_junior = AgeClass(name="Junior (U23)", min_age=18, max_age=23)
+        ac_open = AgeClass(name="Open (24-39)", min_age=24, max_age=39)
+        ac_masters40 = AgeClass(name="Masters I (40-49)", min_age=40, max_age=49)
+        ac_masters50 = AgeClass(name="Masters II (50+)", min_age=50, max_age=None)
+        db.session.add_all([ac_junior, ac_open, ac_masters40, ac_masters50])
+        db.session.commit()
+        print("Dummy age classes added.")
+
+    if Lifter.query.count() == 0:
+        print("Adding dummy lifters and attempts...")
+        
+        lifter1 = Lifter(name="John Doe", gender="Male", lifter_id_number="JD001", actual_weight=82.5, birth_date=date(2000, 5, 10))
+        db.session.add(lifter1)
+        db.session.commit()
+        lifter1.assign_primary_classes()
+        db.session.commit()
+
+        lifter2 = Lifter(name="Jane Smith", gender="Female", lifter_id_number="JS002", actual_weight=68.0, birth_date=date(2002, 1, 15))
+        db.session.add(lifter2)
+        db.session.commit()
+        lifter2.assign_primary_classes()
+        db.session.commit()
+
+        lifter3 = Lifter(name="Mike Johnson", gender="Male", lifter_id_number="MJ003", actual_weight=95.0, birth_date=date(1980, 11, 20))
+        db.session.add(lifter3)
+        db.session.commit()
+        lifter3.assign_primary_classes()
+        
+        # Add Mike to an additional age class (e.g., Open, if applicable)
+        open_ac = AgeClass.query.filter_by(name="Open (24-39)").first()
+        if open_ac:
+            lifter3.additional_age_classes.append(open_ac)
+        db.session.commit()
+
+
+        lift_types = ['squat', 'bench', 'deadlift']
+        opener_weights_map = {
+            "JD001": {'squat': 180.0, 'bench': 110.0, 'deadlift': 200.0},
+            "JS002": {'squat': 100.0, 'bench': 60.0, 'deadlift': 120.0},
+            "MJ003": {'squat': 200.0, 'bench': 130.0, 'deadlift': 230.0}
+        }
+
+        for lifter in [lifter1, lifter2, lifter3]:
+            opener_weights = opener_weights_map[lifter.lifter_id_number]
+            for lift_type in lift_types:
+                for i in range(1, 4):
+                    new_lift_attempt = LiftAttempt(
+                        lifter_id=lifter.id,
+                        lift_type=lift_type,
+                        weight_lifted=opener_weights[lift_type] + (i - 1) * 5,
+                        attempt_number=i,
+                        status='pending'
+                    )
+                    db.session.add(new_lift_attempt)
+        db.session.commit()
+        print("Dummy lifters and attempts added.")
+
+# --- API Endpoints ---
+
+@app.route('/judge_login', methods=['POST'])
+def judge_login():
+    data = request.get_json()
+    pin = data.get('pin')
+
+    if not pin:
+        return jsonify({"error": "PIN is required"}), 400
+
+    judge_id = JUDGE_PINS.get(pin)
+    if judge_id:
+        return jsonify({"message": "Login successful", "judge_id": judge_id}), 200
+    else:
+        return jsonify({"error": "Invalid PIN"}), 401
+
+@app.route('/meet_state', methods=['GET'])
+def get_meet_state_endpoint():
+    meet_state_obj = MeetState.query.get(1)
+    if meet_state_obj:
+        return jsonify(meet_state_obj.to_dict())
+    return jsonify({"error": "Meet state not found"}), 404
+
+@app.route('/meet_state', methods=['POST'])
+def set_meet_state_endpoint():
+    data = request.get_json()
+    meet_state_obj = MeetState.query.get(1)
+    if not meet_state_obj:
+        return jsonify({"error": "Meet state not found"}), 404
+
+    if 'current_lift_type' in data and data['current_lift_type'] in ['squat', 'bench', 'deadlift']:
+        meet_state_obj.current_lift_type = data['current_lift_type']
+        meet_state_obj.current_attempt_number = 1
+        meet_state_obj.current_active_lift_id = None
+        db.session.commit()
+        socketio.emit('meet_state_updated', meet_state_obj.to_dict())
+        socketio.emit('active_lift_changed', None)
+        return jsonify(meet_state_obj.to_dict()), 200
+    return jsonify({"error": "Invalid or missing 'current_lift_type'."}), 400
+
+@app.route('/meet_state/advance_attempt', methods=['POST'])
+def advance_attempt_endpoint():
+    meet_state_obj = MeetState.query.get(1)
+    if not meet_state_obj:
+        return jsonify({"error": "Meet state not found"}), 404
+
+    if meet_state_obj.current_attempt_number < 3:
+        meet_state_obj.current_attempt_number += 1
+        meet_state_obj.current_active_lift_id = None
+        db.session.commit()
+        socketio.emit('meet_state_updated', meet_state_obj.to_dict())
+        socketio.emit('active_lift_changed', None)
+        return jsonify(meet_state_obj.to_dict()), 200
+    return jsonify({"error": "Cannot advance past 3rd attempt."}), 400
+
+@app.route('/weight_classes', methods=['GET'])
+def get_weight_classes():
+    weight_classes = WeightClass.query.all()
+    return jsonify([wc.to_dict() for wc in weight_classes])
+
+@app.route('/weight_classes', methods=['POST'])
+def add_weight_class():
+    data = request.get_json()
+    name = data.get('name')
+    min_weight = data.get('min_weight')
+    max_weight = data.get('max_weight')
+    gender = data.get('gender')
+
+    if not all([name, min_weight is not None, gender]):
+        return jsonify({"error": "Missing data for weight class"}), 400
+
+    if WeightClass.query.filter_by(name=name).first():
+        return jsonify({"error": f"Weight class '{name}' already exists"}), 409
+
+    new_wc = WeightClass(name=name, min_weight=min_weight, max_weight=max_weight, gender=gender)
+    db.session.add(new_wc)
+    db.session.commit()
+    
+    # Re-assign primary weight classes for all lifters as new classes might affect assignments
+    all_lifters = Lifter.query.all()
+    for lifter in all_lifters:
+        lifter.assign_primary_classes()
+    db.session.commit()
+    socketio.emit('lifter_updated', None) # Notify frontends to re-fetch lifters
+    return jsonify(new_wc.to_dict()), 201
+
+@app.route('/weight_classes/<int:wc_id>', methods=['DELETE'])
+def delete_weight_class(wc_id):
+    wc = WeightClass.query.get(wc_id)
+    if not wc:
+        return jsonify({"message": "Weight class not found"}), 404
+    
+    # Check if this is a primary weight class for any lifter
+    lifters_with_primary_wc = Lifter.query.filter_by(primary_weight_class_id=wc_id).all()
+    if lifters_with_primary_wc:
+        return jsonify({"error": "Cannot delete primary weight class with assigned lifters. Reassign lifters first."}), 409
+
+    # Remove this class from any lifter's additional_weight_classes
+    for lifter in Lifter.query.filter(Lifter.additional_weight_classes.any(WeightClass.id == wc_id)).all():
+        lifter.additional_weight_classes.remove(wc)
+    db.session.delete(wc)
+    db.session.commit()
+    socketio.emit('lifter_updated', None)
+    return jsonify({"message": "Weight class deleted"}), 200
+
+@app.route('/age_classes', methods=['GET'])
+def get_age_classes():
+    age_classes = AgeClass.query.all()
+    return jsonify([ac.to_dict() for ac in age_classes])
+
+@app.route('/age_classes', methods=['POST'])
+def add_age_class():
+    data = request.get_json()
+    name = data.get('name')
+    min_age = data.get('min_age')
+    max_age = data.get('max_age')
+
+    if not all([name, min_age is not None]):
+        return jsonify({"error": "Missing data for age class"}), 400
+
+    if AgeClass.query.filter_by(name=name).first():
+        return jsonify({"error": f"Age class '{name}' already exists"}), 409
+
+    new_ac = AgeClass(name=name, min_age=min_age, max_age=max_age)
+    db.session.add(new_ac)
+    db.session.commit()
+    
+    all_lifters = Lifter.query.all()
+    for lifter in all_lifters:
+        lifter.assign_primary_classes()
+    db.session.commit()
+    socketio.emit('lifter_updated', None)
+    return jsonify(new_ac.to_dict()), 201
+
+@app.route('/age_classes/<int:ac_id>', methods=['DELETE'])
+def delete_age_class(ac_id):
+    ac = AgeClass.query.get(ac_id)
+    if not ac:
+        return jsonify({"message": "Age class not found"}), 404
+
+    lifters_with_primary_ac = Lifter.query.filter_by(primary_age_class_id=ac_id).all()
+    if lifters_with_primary_ac:
+        return jsonify({"error": "Cannot delete primary age class with assigned lifters. Reassign lifters first."}), 409
+
+    for lifter in Lifter.query.filter(Lifter.additional_age_classes.any(AgeClass.id == ac_id)).all():
+        lifter.additional_age_classes.remove(ac)
+
+    db.session.delete(ac)
+    db.session.commit()
+    socketio.emit('lifter_updated', None)
+    return jsonify({"message": "Age class deleted"}), 200
 
 @app.route('/lifters', methods=['GET'])
 def get_lifters():
     lifters = Lifter.query.all()
-    return jsonify([lifter.to_dict() for lifter in lifters])
+    return jsonify([l.to_dict() for l in lifters])
 
-@app.route('/lifters/<int:lifter_id>', methods=['GET'])
-def get_lifter(lifter_id):
-    lifter = Lifter.query.get(lifter_id)
-    if lifter:
-        return jsonify(lifter.to_dict())
-    return jsonify({"error": "Lifter not found"}), 404
+@app.route('/lifters', methods=['POST'])
+def add_lifter():
+    data = request.get_json()
+    name = data.get('name')
+    gender = data.get('gender')
+    lifter_id_number = data.get('lifter_id_number')
+    actual_weight = data.get('actual_weight')
+    birth_date_str = data.get('birth_date')
+    opener_squat = data.get('opener_squat')
+    opener_bench = data.get('opener_bench')
+    opener_deadlift = data.get('opener_deadlift')
 
-@app.route('/lifters/<int:lifter_id>', methods=['PUT'])
-def update_lifter(lifter_id):
-    lifter = Lifter.query.get(lifter_id)
-    if not lifter:
-        return jsonify({"error": "Lifter not found"}), 404
-    
-    data = request.json
-    lifter.name = data.get('name', lifter.name)
-    lifter.gender = data.get('gender', lifter.gender)
-    lifter.age = data.get('age', lifter.age)
-    lifter.bodyweight = data.get('bodyweight', lifter.bodyweight)
-    lifter.entry_status = data.get('entry_status', lifter.entry_status)
+    if not all([name, gender, lifter_id_number, actual_weight is not None, birth_date_str,
+                opener_squat is not None, opener_bench is not None, opener_deadlift is not None]):
+        return jsonify({"error": "Missing data for lifter or openers"}), 400
 
-    # Re-determine weight class if bodyweight or gender changes
-    if 'bodyweight' in data or 'gender' in data:
-        weight_class = None
-        current_gender = data.get('gender', lifter.gender)
-        current_bodyweight = data.get('bodyweight', lifter.bodyweight)
-
-        weight_classes_query = WeightClass.query.filter(WeightClass.name.like(f"{current_gender[0]}%"))
-        if current_gender == 'Male':
-            weight_classes_query = WeightClass.query.filter(WeightClass.name.like('Men%'))
-        elif current_gender == 'Female':
-            weight_classes_query = WeightClass.query.filter(WeightClass.name.like('Women%'))
-        
-        weight_classes_for_gender = weight_classes_query.all()
-
-        for wc in weight_classes_for_gender:
-            if wc.min_weight is not None and wc.max_weight is not None:
-                if wc.min_weight < current_bodyweight <= wc.max_weight:
-                    weight_class = wc
-                    break
-            elif wc.min_weight is not None and wc.max_weight is None:
-                if current_bodyweight > wc.min_weight:
-                    weight_class = wc
-                    break
-            elif wc.min_weight is None and wc.max_weight is not None:
-                if current_bodyweight <= wc.max_weight:
-                    weight_class = wc
-                    break
-
-        if weight_class:
-            lifter.weight_class_id = weight_class.id
-        else:
-            return jsonify({"error": "Could not determine weight class for updated bodyweight and gender"}), 400
-
-    # Re-determine age class if age changes
-    if 'age' in data:
-        age_class = None
-        current_age = data.get('age', lifter.age)
-        age_classes = AgeClass.query.all()
-        for ac in age_classes:
-            if ac.min_age is not None and ac.max_age is not None:
-                if ac.min_age <= current_age <= ac.max_age:
-                    age_class = ac
-                    break
-            elif ac.min_age is not None and ac.max_age is None:
-                if current_age >= ac.min_age:
-                    age_class = ac
-                    break
-        if age_class:
-            lifter.age_class_id = age_class.id
-        else:
-            return jsonify({"error": "Could not determine age class for updated age"}), 400
+    if Lifter.query.filter_by(lifter_id_number=lifter_id_number).first():
+        return jsonify({"error": f"Lifter with ID '{lifter_id_number}' already exists"}), 409
 
     try:
-        db.session.commit()
-        return jsonify(lifter.to_dict())
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+        birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"error": "Invalid birth_date format. Use Malhotra-MM-DD."}), 400
 
-@app.route('/lifters/<int:lifter_id>', methods=['DELETE'])
-def delete_lifter(lifter_id):
-    lifter = Lifter.query.get(lifter_id)
-    if not lifter:
-        return jsonify({"error": "Lifter not found"}), 404
-    try:
-        db.session.delete(lifter)
-        db.session.commit()
-        return jsonify({"message": "Lifter deleted successfully"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+    new_lifter = Lifter(
+        name=name,
+        gender=gender,
+        lifter_id_number=lifter_id_number,
+        actual_weight=actual_weight,
+        birth_date=birth_date
+    )
+    db.session.add(new_lifter)
+    db.session.commit()
 
-# Lift Attempt Management
-@app.route('/lift_attempts', methods=['POST'])
-def add_lift_attempt():
-    data = request.json
-    lifter_id = data.get('lifter_id')
-    lift_type = data.get('lift_type')
-    attempt_number = data.get('attempt_number')
-    weight = data.get('weight')
+    new_lifter.assign_primary_classes()
+    db.session.commit()
 
-    if not all([lifter_id, lift_type, attempt_number, weight]):
-        return jsonify({"error": "Missing lift attempt data"}), 400
-    
-    lifter = Lifter.query.get(lifter_id)
-    if not lifter:
-        return jsonify({"error": "Lifter not found"}), 404
-
-    try:
-        new_attempt = LiftAttempt(
-            lifter_id=lifter_id,
-            lift_type=lift_type,
-            attempt_number=attempt_number,
-            weight=weight
-        )
-        db.session.add(new_attempt)
-        db.session.commit()
-        socketio.emit('new_lift_attempt', new_attempt.to_dict()) # Notify frontends
-        return jsonify(new_attempt.to_dict()), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-
-@app.route('/lift_attempts', methods=['GET'])
-def get_lift_attempts():
-    attempts = LiftAttempt.query.all()
-    return jsonify([attempt.to_dict() for attempt in attempts])
-
-@app.route('/lift_attempts/<int:attempt_id>', methods=['PUT'])
-def update_lift_attempt(attempt_id):
-    attempt = LiftAttempt.query.get(attempt_id)
-    if not attempt:
-        return jsonify({"error": "Lift attempt not found"}), 404
-    
-    data = request.json
-    attempt.score_status = data.get('score_status', attempt.score_status)
-    attempt.judge_scores = data.get('judge_scores', attempt.judge_scores)
-
-    try:
-        db.session.commit()
-        socketio.emit('lift_attempt_updated', attempt.to_dict()) # Notify frontends
-        return jsonify(attempt.to_dict())
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-
-# Meet State Management
-@app.route('/meet_state', methods=['GET'])
-def get_meet_state():
-    state = MeetState.query.first()
-    if state:
-        return jsonify(state.to_dict())
-    return jsonify({"error": "Meet state not found"}), 404 # Should ideally always exist after create_tables
-
-@app.route('/meet_state', methods=['PUT'])
-def update_meet_state():
-    state = MeetState.query.first()
-    if not state:
-        return jsonify({"error": "Meet state not found. Please initialize."}), 404
-
-    data = request.json
-    state.current_lifter_id = data.get('current_lifter_id', state.current_lifter_id)
-    state.current_lift_type = data.get('current_lift_type', state.current_lift_type)
-    state.current_attempt_number = data.get('current_attempt_number', state.current_attempt_number)
-    state.is_meet_active = data.get('is_meet_active', state.is_meet_active)
-
-    try:
-        db.session.commit()
-        socketio.emit('meet_state_updated', state.to_dict()) # Notify frontends
-        return jsonify(state.to_dict())
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-
-# Import Data from Excel (Organizer function)
-@app.route('/import_excel', methods=['POST'])
-def import_excel():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-    
-    if file:
-        try:
-            df = pd.read_excel(file)
-            
-            # Assuming columns: Name, Gender, Age, Bodyweight
-            # Map these to your Lifter model and add to DB
-            for index, row in df.iterrows():
-                name = row['Name']
-                gender = row['Gender']
-                age = int(row['Age'])
-                bodyweight = float(row['Bodyweight'])
-
-                # Logic to determine weight_class_id and age_class_id (from add_lifter route)
-                weight_class = None
-                weight_classes_query = WeightClass.query.filter(WeightClass.name.like(f"{gender[0]}%"))
-                if gender == 'Male':
-                    weight_classes_query = WeightClass.query.filter(WeightClass.name.like('Men%'))
-                elif gender == 'Female':
-                    weight_classes_query = WeightClass.query.filter(WeightClass.name.like('Women%'))
-                
-                weight_classes_for_gender = weight_classes_query.all()
-
-                for wc in weight_classes_for_gender:
-                    if wc.min_weight is not None and wc.max_weight is not None:
-                        if wc.min_weight < bodyweight <= wc.max_weight:
-                            weight_class = wc
-                            break
-                    elif wc.min_weight is not None and wc.max_weight is None:
-                        if bodyweight > wc.min_weight:
-                            weight_class = wc
-                            break
-                    elif wc.min_weight is None and wc.max_weight is not None:
-                        if bodyweight <= wc.max_weight:
-                            weight_class = wc
-                            break
-                
-                if not weight_class:
-                    print(f"Warning: Could not determine weight class for {name}, skipping.")
-                    continue # Skip this row
-
-                age_class = None
-                age_classes = AgeClass.query.all()
-                for ac in age_classes:
-                    if ac.min_age is not None and ac.max_age is not None:
-                        if ac.min_age <= age <= ac.max_age:
-                            age_class = ac
-                            break
-                    elif ac.min_age is not None and ac.max_age is None:
-                        if age >= ac.min_age:
-                            age_class = ac
-                            break
-                
-                if not age_class:
-                    print(f"Warning: Could not determine age class for {name}, skipping.")
-                    continue # Skip this row
-
-                try:
-                    new_lifter = Lifter(
-                        name=name,
-                        gender=gender,
-                        age=age,
-                        bodyweight=bodyweight,
-                        weight_class_id=weight_class.id,
-                        age_class_id=age_class.id
-                    )
-                    db.session.add(new_lifter)
-                    db.session.commit() # Commit each lifter or batch commit for performance
-                except IntegrityError:
-                    db.session.rollback()
-                    print(f"Lifter {name} already exists or database error, skipping.")
-                except Exception as e:
-                    db.session.rollback()
-                    print(f"Error adding lifter {name}: {str(e)}, skipping.")
-
-            return jsonify({"message": "Lifters imported successfully"}), 200
-        except Exception as e:
-            return jsonify({"error": f"Failed to process Excel file: {str(e)}"}), 500
-
-# Judge Login Endpoint
-@app.route('/judge_login', methods=['POST'])
-def judge_login():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-
-    # Simple hardcoded check for demonstration purposes
-    # In a real app, integrate with a proper auth system (e.g., Firebase Auth, Auth0)
-    if username == 'judge' and password == 'password123':
-        # Return a simple token or session info for the judge (e.g., just a success message for this demo)
-        return jsonify({"message": "Judge login successful", "token": "dummy_judge_token"}), 200
-    else:
-        return jsonify({"error": "Invalid judge credentials"}), 401
-
-# Current Lift Information for Public Display and Judge App
-@app.route('/current_lift', methods=['GET'])
-def get_current_lift_info():
-    meet_state = MeetState.query.first()
-    if not meet_state or not meet_state.is_meet_active:
-        return jsonify({"current_lift": None, "message": "Meet is not active or no lift in progress"}), 200
-
-    current_lifter = meet_state.current_lifter
-    if not current_lifter:
-        return jsonify({"current_lift": None, "message": "No lifter currently set"}), 200
-    
-    # Fetch previous attempts for the current lifter and lift type
-    previous_attempts = LiftAttempt.query.filter_by(
-        lifter_id=current_lifter.id,
-        lift_type=meet_state.current_lift_type
-    ).order_by(LiftAttempt.attempt_number.asc()).all()
-
-    current_lift_info = {
-        "lifter_name": current_lifter.name,
-        "gender": current_lifter.gender,
-        "age": current_lifter.age,
-        "bodyweight": current_lifter.bodyweight,
-        "weight_class": current_lifter.weight_class.name if current_lifter.weight_class else "N/A",
-        "age_class": current_lifter.age_class.name if current_lifter.age_class else "N/A",
-        "lift_type": meet_state.current_lift_type,
-        "attempt_number": meet_state.current_attempt_number,
-        "previous_attempts": [att.to_dict() for att in previous_attempts]
+    lift_types = ['squat', 'bench', 'deadlift']
+    opener_weights = {
+        'squat': opener_squat,
+        'bench': opener_bench,
+        'deadlift': opener_deadlift
     }
-    return jsonify({"current_lift": current_lift_info}), 200
+
+    for lift_type in lift_types:
+        for i in range(1, 4):
+            initial_weight = opener_weights[lift_type] + (i - 1) * 5
+            new_lift_attempt = LiftAttempt(
+                lifter_id=new_lifter.id,
+                lift_type=lift_type,
+                weight_lifted=initial_weight,
+                attempt_number=i,
+                status='pending'
+            )
+            db.session.add(new_lift_attempt)
+    db.session.commit()
+
+    socketio.emit('lifter_added', new_lifter.to_dict())
+    return jsonify(new_lifter.to_dict()), 201
+
+@app.route('/lifters/<int:lifter_id>/add_additional_weight_class', methods=['POST'])
+def add_additional_weight_class(lifter_id):
+    lifter = Lifter.query.get(lifter_id)
+    if not lifter:
+        return jsonify({"error": "Lifter not found"}), 404
+    data = request.get_json()
+    weight_class_id = data.get('weight_class_id')
+    wc = WeightClass.query.get(weight_class_id)
+
+    if not wc:
+        return jsonify({"error": "Weight class not found"}), 404
+
+    if lifter.primary_weight_class_id == wc.id:
+        return jsonify({"error": "Cannot add primary weight class as an additional class."}), 400
+
+    if lifter.primary_weight_class and wc.min_weight < lifter.primary_weight_class.min_weight:
+        return jsonify({"error": "Additional weight class must be strictly heavier or equal to the primary class."}), 400 # Changed to equal
+
+    if wc not in lifter.additional_weight_classes:
+        lifter.additional_weight_classes.append(wc)
+        db.session.commit()
+        socketio.emit('lifter_updated', lifter.to_dict())
+        return jsonify(lifter.to_dict()), 200
+    return jsonify({"message": "Weight class already added to this lifter."}), 409
+
+@app.route('/lifters/<int:lifter_id>/remove_additional_weight_class', methods=['POST'])
+def remove_additional_weight_class(lifter_id):
+    lifter = Lifter.query.get(lifter_id)
+    if not lifter:
+        return jsonify({"error": "Lifter not found"}), 404
+    data = request.get_json()
+    weight_class_id = data.get('weight_class_id')
+    wc = WeightClass.query.get(weight_class_id)
+
+    if not wc:
+        return jsonify({"error": "Weight class not found"}), 404
+
+    if wc in lifter.additional_weight_classes:
+        lifter.additional_weight_classes.remove(wc)
+        db.session.commit()
+        socketio.emit('lifter_updated', lifter.to_dict())
+        return jsonify(lifter.to_dict()), 200
+    return jsonify({"message": "Weight class not found in additional classes for this lifter."}), 404
+
+@app.route('/lifters/<int:lifter_id>/add_additional_age_class', methods=['POST'])
+def add_additional_age_class(lifter_id):
+    lifter = Lifter.query.get(lifter_id)
+    if not lifter:
+        return jsonify({"error": "Lifter not found"}), 404
+    data = request.get_json()
+    age_class_id = data.get('age_class_id')
+    ac = AgeClass.query.get(age_class_id)
+
+    if not ac:
+        return jsonify({"error": "Age class not found"}), 404
+
+    if lifter.primary_age_class_id == ac.id:
+        return jsonify({"error": "Cannot add primary age class as an additional class."}), 400
+    
+    if lifter.primary_age_class and ac.min_age < lifter.primary_age_class.min_age:
+        return jsonify({"error": "Additional age class must be strictly older or equal to the primary class."}), 400 # Changed to equal
+
+    if ac not in lifter.additional_age_classes:
+        lifter.additional_age_classes.append(ac)
+        db.session.commit()
+        socketio.emit('lifter_updated', lifter.to_dict())
+        return jsonify(lifter.to_dict()), 200
+    return jsonify({"message": "Age class already added to this lifter."}), 409
+
+@app.route('/lifters/<int:lifter_id>/remove_additional_age_class', methods=['POST'])
+def remove_additional_age_class(lifter_id):
+    lifter = Lifter.query.get(lifter_id)
+    if not lifter:
+        return jsonify({"error": "Lifter not found"}), 404
+    data = request.get_json()
+    age_class_id = data.get('age_class_id')
+    ac = AgeClass.query.get(age_class_id)
+
+    if not ac:
+        return jsonify({"error": "Age class not found"}), 404
+
+    if ac in lifter.additional_age_classes:
+        lifter.additional_age_classes.remove(ac)
+        db.session.commit()
+        socketio.emit('lifter_updated', lifter.to_dict())
+        return jsonify(lifter.to_dict()), 200
+    return jsonify({"message": "Age class not found in additional classes for this lifter."}), 404
 
 
-# SocketIO Events (Example)
-@socketio.on('connect')
-def connect():
-    print(f'Client connected: {request.sid}')
-    # Emit current meet state to newly connected client
-    with app.app_context():
-        state = MeetState.query.first()
-        if state:
-            emit('meet_state_updated', state.to_dict())
+@app.route('/lifts', methods=['GET'])
+def get_lifts():
+    lifts = LiftAttempt.query.order_by(LiftAttempt.timestamp.asc()).all()
+    return jsonify([lift.to_dict() for lift in lifts])
+
+@app.route('/current_lift', methods=['GET'])
+def get_current_lift():
+    meet_state_obj = MeetState.query.get(1)
+    if meet_state_obj and meet_state_obj.current_active_lift_id:
+        active_lift = LiftAttempt.query.get(meet_state_obj.current_active_lift_id)
+        if active_lift:
+            return jsonify(active_lift.to_dict())
+    return jsonify({"message": "No active lift"}), 404
+
+@app.route('/set_active_lift', methods=['POST'])
+def set_active_lift():
+    data = request.get_json()
+    lift_id = data.get('lift_id')
+
+    meet_state_obj = MeetState.query.get(1)
+    if not meet_state_obj:
+        return jsonify({"error": "Meet state not found"}), 404
+
+    # Deactivate any currently active lift
+    if meet_state_obj.current_active_lift_id:
+        current_active = LiftAttempt.query.get(meet_state_obj.current_active_lift_id)
+        if current_active:
+            if current_active.overall_result is None:
+                current_active.status = 'pending'
+            else:
+                current_active.status = 'completed'
+            db.session.commit()
+            socketio.emit('lift_updated', current_active.to_dict())
+
+    new_active = None
+    if lift_id:
+        new_active = LiftAttempt.query.filter_by(
+            id=lift_id,
+            status='pending',
+            lift_type=meet_state_obj.current_lift_type,
+            attempt_number=meet_state_obj.current_attempt_number
+        ).first()
+        if not new_active:
+            return jsonify({"error": "Lift not found or not in pending status for current type/attempt."}), 404
+    else:
+        # Auto-select next pending lift
+        new_active = LiftAttempt.query.join(Lifter).filter(
+            LiftAttempt.status == 'pending',
+            LiftAttempt.lift_type == meet_state_obj.current_lift_type,
+            LiftAttempt.attempt_number == meet_state_obj.current_attempt_number
+        ).order_by(
+            LiftAttempt.weight_lifted.asc(),
+            Lifter.actual_weight.asc(),
+            LiftAttempt.timestamp.asc()
+        ).first()
+        if not new_active:
+            meet_state_obj.current_active_lift_id = None
+            db.session.commit()
+            socketio.emit('meet_state_updated', meet_state_obj.to_dict())
+            socketio.emit('active_lift_changed', None)
+            return jsonify({"message": "No pending lifts in current queue."}), 200
+
+    new_active.status = 'active'
+    new_active.judge1_score = None
+    new_active.judge2_score = None
+    new_active.judge3_score = None
+    new_active.overall_result = None
+    db.session.commit()
+
+    meet_state_obj.current_active_lift_id = new_active.id
+    db.session.commit()
+
+    socketio.emit('active_lift_changed', new_active.to_dict())
+    socketio.emit('lift_updated', new_active.to_dict())
+    socketio.emit('meet_state_updated', meet_state_obj.to_dict())
+    return jsonify(new_active.to_dict())
+
+@app.route('/submit_score', methods=['POST'])
+def submit_score():
+    data = request.get_json()
+    lift_id = data.get('lift_id')
+    judge_number = data.get('judge_number')
+    score = data.get('score')
+
+    if not all([lift_id, judge_number, score is not None]):
+        return jsonify({"error": "Missing data"}), 400
+
+    lift = LiftAttempt.query.get(lift_id)
+    if not lift:
+        return jsonify({"error": "Lift not found"}), 404
+
+    meet_state_obj = MeetState.query.get(1)
+    if not meet_state_obj or meet_state_obj.current_active_lift_id != lift.id:
+        return jsonify({"error": "This is not the current active lift."}), 400
+
+    try:
+        if judge_number == 1:
+            lift.judge1_score = score
+        elif judge_number == 2:
+            lift.judge2_score = score
+        elif judge_number == 3:
+            lift.judge3_score = score
         else:
-            print("No meet state found to emit on connect.")
+            return jsonify({"error": "Invalid judge number"}), 400
+
+        db.session.commit()
+
+        if lift.calculate_overall_result():
+            db.session.commit()
+            if lift.overall_result is not None:
+                lift.status = 'completed'
+                db.session.commit()
+                if meet_state_obj.current_active_lift_id == lift.id:
+                    meet_state_obj.current_active_lift_id = None
+                    db.session.commit()
+                    socketio.emit('meet_state_updated', meet_state_obj.to_dict())
+
+            socketio.emit('lift_updated', lift.to_dict())
+            return jsonify(lift.to_dict())
+
+        socketio.emit('lift_updated', lift.to_dict())
+        return jsonify(lift.to_dict())
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/lifters/<int:lifter_id>/attempts', methods=['GET'])
+def get_lifter_attempts_endpoint(lifter_id):
+    lifter = Lifter.query.get(lifter_id)
+    if not lifter:
+        return jsonify({"message": "Lifter not found"}), 404
+    
+    attempts = LiftAttempt.query.filter_by(lifter_id=lifter_id).order_by(
+        LiftAttempt.lift_type, LiftAttempt.attempt_number
+    ).all()
+    
+    return jsonify([att.to_dict() for att in attempts])
+
+@app.route('/rankings', methods=['GET'])
+def get_rankings():
+    all_lifters = Lifter.query.all()
+    rankings_by_class = {}
+
+    for lifter in all_lifters:
+        completed_attempts = LiftAttempt.query.filter_by(
+            lifter_id=lifter.id,
+            status='completed',
+            overall_result=True
+        ).all()
+
+        best_squat = 0.0
+        best_bench = 0.0
+        best_deadlift = 0.0
+
+        for attempt in completed_attempts:
+            if attempt.lift_type == 'squat':
+                best_squat = max(best_squat, attempt.weight_lifted)
+            elif attempt.lift_type == 'bench':
+                best_bench = max(best_bench, attempt.weight_lifted)
+            elif attempt.lift_type == 'deadlift':
+                best_deadlift = max(best_deadlift, attempt.weight_lifted)
+        
+        total = best_squat + best_bench + best_deadlift
+
+        lifter_data = {
+            'id': lifter.id,
+            'name': lifter.name,
+            'lifter_id_number': lifter.lifter_id_number,
+            'gender': lifter.gender,
+            'actual_weight': lifter.actual_weight,
+            'age': lifter.calculate_age(),
+            'best_squat': best_squat if best_squat > 0 else 'N/A',
+            'best_bench': best_bench if best_bench > 0 else 'N/A',
+            'best_deadlift': best_deadlift if best_deadlift > 0 else 'N/A',
+            'total': total if total > 0 else 'N/A',
+            'primary_weight_class_name': lifter.primary_weight_class.name if lifter.primary_weight_class else 'N/A',
+            'primary_age_class_name': lifter.primary_age_class.name if lifter.primary_age_class else 'N/A',
+            'additional_weight_class_names': [wc.name for wc in lifter.additional_weight_classes],
+            'additional_age_class_names': [ac.name for ac in lifter.additional_age_classes],
+        }
+
+        all_relevant_weight_classes = [lifter.primary_weight_class] + list(lifter.additional_weight_classes)
+        for wc in all_relevant_weight_classes:
+            if wc:
+                wc_key = wc.name
+                if wc_key not in rankings_by_class:
+                    rankings_by_class[wc_key] = []
+                rankings_by_class[wc_key].append(lifter_data)
+        
+        all_relevant_age_classes = [lifter.primary_age_class] + list(lifter.additional_age_classes)
+        for ac in all_relevant_age_classes:
+            if ac:
+                ac_key = ac.name
+                if ac_key not in rankings_by_class:
+                    rankings_by_class[ac_key] = []
+                if not any(l['id'] == lifter_data['id'] for l in rankings_by_class[ac_key]):
+                    rankings_by_class[ac_key].append(lifter_data)
+
+    for class_key in rankings_by_class:
+        rankings_by_class[class_key].sort(key=lambda x: x['total'] if isinstance(x['total'], (int, float)) else -1, reverse=True)
+
+    return jsonify(rankings_by_class)
+
+@app.route('/next_lift_in_queue', methods=['GET'])
+def get_next_lift_in_queue_endpoint():
+    meet_state_obj = MeetState.query.get(1)
+    if not meet_state_obj:
+        return jsonify({"error": "Meet state not found"}), 404
+
+    next_lift = LiftAttempt.query.join(Lifter).filter(
+        LiftAttempt.status == 'pending',
+        LiftAttempt.lift_type == meet_state_obj.current_lift_type,
+        LiftAttempt.attempt_number == meet_state_obj.current_attempt_number
+    ).order_by(
+        LiftAttempt.weight_lifted.asc(),
+        Lifter.actual_weight.asc(),
+        LiftAttempt.timestamp.asc()
+    ).first()
+    
+    if next_lift:
+        return jsonify(next_lift.to_dict())
+    return jsonify({"message": "No pending lifts in current queue for this lift type."}), 404
+
+@app.route('/export_meet_data', methods=['GET'])
+def export_meet_data():
+    try:
+        backup_dir = os.path.join(basedir, 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_name = f"powerlifting_meet_data_{timestamp_str}.xlsx"
+        file_path = os.path.join(backup_dir, file_name)
+
+        lifters_data_list = []
+        for lifter in Lifter.query.all():
+            lifter_dict = lifter.to_dict()
+            lifter_dict['best_squat'] = 'N/A'
+            lifter_dict['best_bench'] = 'N/A'
+            lifter_dict['best_deadlift'] = 'N/A'
+            lifter_dict['total'] = 'N/A'
+
+            best_lifts = {}
+            for attempt in LiftAttempt.query.filter_by(lifter_id=lifter.id, overall_result=True, status='completed').all():
+                best_lifts[attempt.lift_type] = max(best_lifts.get(attempt.lift_type, 0), attempt.weight_lifted)
+
+            if 'squat' in best_lifts: lifter_dict['best_squat'] = best_lifts['squat']
+            if 'bench' in best_lifts: lifter_dict['best_bench'] = best_lifts['bench']
+            if 'deadlift' in best_lifts: lifter_dict['best_deadlift'] = best_lifts['deadlift']
+            
+            total_sum = (best_lifts.get('squat', 0) or 0) + \
+                        (best_lifts.get('bench', 0) or 0) + \
+                        (best_lifts.get('deadlift', 0) or 0)
+            if total_sum > 0: lifter_dict['total'] = total_sum
+
+            # Flatten additional classes into strings for Excel
+            lifter_dict['additional_weight_classes'] = ', '.join(lifter_dict['additional_weight_class_names'])
+            lifter_dict['additional_age_classes'] = ', '.join(lifter_dict['additional_age_class_names'])
+            
+            # Remove original JSON parsed lists
+            del lifter_dict['additional_weight_class_names']
+            del lifter_dict['additional_age_class_names']
+            del lifter_dict['additional_weight_class_ids']
+            del lifter_dict['additional_age_class_ids']
+
+            lifters_data_list.append(lifter_dict)
+        
+        # Prepare lifts data with all judge scores and results
+        lifts_data_list = []
+        for lift in LiftAttempt.query.all():
+            lift_dict = lift.to_dict()
+            lift_dict['judge1_score'] = 'GOOD' if lift_dict['judge1_score'] else ('BAD' if lift_dict['judge1_score'] is not None else 'N/A')
+            lift_dict['judge2_score'] = 'GOOD' if lift_dict['judge2_score'] else ('BAD' if lift_dict['judge2_score'] is not None else 'N/A')
+            lift_dict['judge3_score'] = 'GOOD' if lift_dict['judge3_score'] else ('BAD' if lift_dict['judge3_score'] is not None else 'N/A')
+            lift_dict['overall_result'] = 'GOOD LIFT' if lift_dict['overall_result'] else ('NO LIFT' if lift_dict['overall_result'] is not None else 'PENDING')
+            lifts_data_list.append(lift_dict)
+
+
+        df_lifters = pd.DataFrame(lifters_data_list)
+        df_lifts = pd.DataFrame(lifts_data_list)
+        df_weight_classes = pd.DataFrame([wc.to_dict() for wc in WeightClass.query.all()])
+        df_age_classes = pd.DataFrame([ac.to_dict() for ac in AgeClass.query.all()])
+        df_meet_state = pd.DataFrame([MeetState.query.get(1).to_dict()])
+
+        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+            df_lifters.to_excel(writer, sheet_name='Lifters', index=False)
+            df_lifts.to_excel(writer, sheet_name='Lift Attempts', index=False)
+            df_weight_classes.to_excel(writer, sheet_name='Weight Classes', index=False)
+            df_age_classes.to_excel(writer, sheet_name='Age Classes', index=False)
+            df_meet_state.to_excel(writer, sheet_name='Meet State', index=False)
+        
+        return jsonify({"message": f"Meet data exported successfully to {file_path}", "file_path": file_path}), 200
+
+    except Exception as e:
+        app.logger.error(f"Error during Excel export: {e}")
+        return jsonify({"error": f"Failed to export data: {str(e)}"}), 500
+
+# --- Socket.IO Events ---
+@socketio.on('connect')
+def test_connect():
+    print('Client connected')
+    meet_state_obj = MeetState.query.get(1)
+    if meet_state_obj:
+        emit('meet_state_updated', meet_state_obj.to_dict())
 
 @socketio.on('disconnect')
-def disconnect():
-    print(f'Client disconnected: {request.sid}')
-
-@socketio.on('update_meet_state_from_organizer')
-def update_meet_state_socket(data):
-    # This event would be triggered by the Organizer app
-    with app.app_context():
-        state = MeetState.query.first()
-        if not state:
-            print("Meet state not found for update from organizer.")
-            return
-
-        state.current_lifter_id = data.get('current_lifter_id', state.current_lifter_id)
-        state.current_lift_type = data.get('current_lift_type', state.current_lift_type)
-        state.current_attempt_number = data.get('current_attempt_number', state.current_attempt_number)
-        state.is_meet_active = data.get('is_meet_active', state.is_meet_active)
-
-        db.session.commit()
-        # Emit the updated state to all connected clients (Public Display, Judge, other Organizers)
-        socketio.emit('meet_state_updated', state.to_dict())
-        print(f"Meet state updated by organizer: {state.to_dict()}")
-
-@socketio.on('submit_score')
-def handle_submit_score(data):
-    # This event would be triggered by the Judge app
-    attempt_id = data.get('attempt_id')
-    judge_index = data.get('judge_index') # 0, 1, or 2
-    passed = data.get('passed') # True or False
-
-    with app.app_context():
-        attempt = LiftAttempt.query.get(attempt_id)
-        if not attempt:
-            print(f"Lift attempt {attempt_id} not found for scoring.")
-            return
-
-        scores = list(attempt.judge_scores) # Convert JSON list to mutable Python list
-        scores[judge_index] = passed
-        attempt.judge_scores = scores # Assign back to JSON field
-
-        # Determine overall score status (2 out of 3 judges must pass)
-        pass_count = sum(1 for s in scores if s is True)
-        if pass_count >= 2:
-            attempt.score_status = 'Success'
-        elif False in scores and True not in scores and None not in scores: # All judges failed and no None scores
-            attempt.score_status = 'Fail'
-        elif all(s is not None for s in scores) and pass_count < 2: # All scores in, but less than 2 passes
-            attempt.score_status = 'Fail'
-        else:
-            attempt.score_status = 'Pending' # Still waiting for more scores
-
-        db.session.commit()
-        # Emit the updated attempt to all connected clients
-        socketio.emit('lift_attempt_updated', attempt.to_dict())
-        print(f"Lift attempt {attempt_id} scored: {attempt.to_dict()}")
+def test_disconnect():
+    print('Client disconnected')
 
 if __name__ == '__main__':
-    # This block runs when the script is executed directly (e.g., during local development).
-    # Gunicorn will handle running the app in production on Cloud Run.
-    # We use socketio.run instead of app.run for Flask-SocketIO.
-    # host="0.0.0.0" is necessary to make the app accessible externally,
-    # and the port is taken from the PORT env var for Cloud Run, or defaults to 5000 locally.
     socketio.run(app, debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

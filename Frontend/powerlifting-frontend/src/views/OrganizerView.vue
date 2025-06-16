@@ -472,13 +472,13 @@ export default {
     const selectedAgeClassToAdd = ref({});
     const selectedAgeClassToRemove = ref({});
 
-    const socket = io("http://localhost:5000");
+    const socket = io("process.env.VUE_APP_BACKEND_API_URL");
 
     // --- Functions ---
 
     const fetchLifters = async () => {
       try {
-        const response = await fetch("http://localhost:5000/lifters");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/lifters");
         const data = await response.json();
         allLifters.value = data;
         // Initialize selection states for new lifters
@@ -499,7 +499,7 @@ export default {
 
     const fetchCurrentLift = async () => {
       try {
-        const response = await fetch("http://localhost:5000/current_lift");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/current_lift");
         if (response.ok) {
           const data = await response.json();
           currentLift.value = data;
@@ -513,8 +513,8 @@ export default {
 
     const fetchNextLiftsInQueue = async () => {
       try {
-        await fetch(`http://localhost:5000/next_lift_in_queue`); // Trigger backend queue logic
-        const allLiftsResponse = await fetch("http://localhost:5000/lifts");
+        await fetch(`process.env.VUE_APP_BACKEND_API_URL/next_lift_in_queue`); // Trigger backend queue logic
+        const allLiftsResponse = await fetch("process.env.VUE_APP_BACKEND_API_URL/lifts");
         if (allLiftsResponse.ok) {
           const allLifts = await allLiftsResponse.json();
           nextLiftsInQueue.value = allLifts
@@ -545,7 +545,7 @@ export default {
 
     const addLifter = async () => {
       try {
-        const response = await fetch("http://localhost:5000/lifters", {
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/lifters", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newLifter.value),
@@ -581,7 +581,7 @@ export default {
     const setActiveLift = async (liftId = null) => {
       try {
         const payload = liftId ? { lift_id: liftId } : {};
-        const response = await fetch(`http://localhost:5000/set_active_lift`, {
+        const response = await fetch(`process.env.VUE_APP_BACKEND_API_URL/set_active_lift`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -624,7 +624,7 @@ export default {
 
     const fetchWeightClasses = async () => {
       try {
-        const response = await fetch("http://localhost:5000/weight_classes");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/weight_classes");
         const data = await response.json();
         weightClasses.value = data;
       } catch (error) {
@@ -634,7 +634,7 @@ export default {
 
     const addWeightClass = async () => {
       try {
-        const response = await fetch("http://localhost:5000/weight_classes", {
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/weight_classes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newWeightClass.value),
@@ -677,7 +677,7 @@ export default {
       }
       try {
         const response = await fetch(
-          `http://localhost:5000/weight_classes/${wcId}`,
+          `process.env.VUE_APP_BACKEND_API_URL/weight_classes/${wcId}`,
           {
             method: "DELETE",
           }
@@ -708,7 +708,7 @@ export default {
     // NEW: Age Class Functions
     const fetchAgeClasses = async () => {
       try {
-        const response = await fetch("http://localhost:5000/age_classes");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/age_classes");
         const data = await response.json();
         ageClasses.value = data;
       } catch (error) {
@@ -718,7 +718,7 @@ export default {
 
     const addAgeClass = async () => {
       try {
-        const response = await fetch("http://localhost:5000/age_classes", {
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/age_classes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newAgeClass.value),
@@ -751,7 +751,7 @@ export default {
       }
       try {
         const response = await fetch(
-          `http://localhost:5000/age_classes/${acId}`,
+          `process.env.VUE_APP_BACKEND_API_URL/age_classes/${acId}`,
           {
             method: "DELETE",
           }
@@ -784,7 +784,7 @@ export default {
       if (!wcId) return;
       try {
         const response = await fetch(
-          `http://localhost:5000/lifters/${lifterId}/add_additional_weight_class`,
+          `process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/add_additional_weight_class`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -819,7 +819,7 @@ export default {
         return;
       try {
         const response = await fetch(
-          `http://localhost:5000/lifters/${lifterId}/remove_additional_weight_class`,
+          `process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/remove_additional_weight_class`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -848,7 +848,7 @@ export default {
       if (!acId) return;
       try {
         const response = await fetch(
-          `http://localhost:5000/lifters/${lifterId}/add_additional_age_class`,
+          `process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/add_additional_age_class`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -881,7 +881,7 @@ export default {
         return;
       try {
         const response = await fetch(
-          `http://localhost:5000/lifters/${lifterId}/remove_additional_age_class`,
+          `process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/remove_additional_age_class`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -961,7 +961,7 @@ export default {
 
     const fetchMeetState = async () => {
       try {
-        const response = await fetch("http://localhost:5000/meet_state");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/meet_state");
         if (response.ok) {
           const data = await response.json();
           currentMeetState.value = data;
@@ -974,7 +974,7 @@ export default {
 
     const setLiftType = async () => {
       try {
-        const response = await fetch("http://localhost:5000/meet_state", {
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/meet_state", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1002,7 +1002,7 @@ export default {
       if (currentMeetState.value.current_attempt_number < 3) {
         try {
           const response = await fetch(
-            "http://localhost:5000/meet_state/advance_attempt",
+            "process.env.VUE_APP_BACKEND_API_URL/meet_state/advance_attempt",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -1035,7 +1035,7 @@ export default {
 
     const fetchRankings = async () => {
       try {
-        const response = await fetch("http://localhost:5000/rankings");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/rankings");
         if (response.ok) {
           const data = await response.json();
           rankings.value = data;
@@ -1053,7 +1053,7 @@ export default {
     const exportMeetData = async () => {
       exportMessage.value = "Exporting data, please wait...";
       try {
-        const response = await fetch("http://localhost:5000/export_meet_data");
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/export_meet_data");
         if (response.ok) {
           const data = await response.json();
           exportMessage.value = data.message;
