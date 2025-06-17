@@ -1,14 +1,17 @@
-# MBR - DEFINITIVE FIX: REMOVED @app.before_first_request, using Flask-SQLAlchemy - June 17, 2025
+# MBR - ULTIMATE FIX ATTEMPT: NO @app.before_first_request, Flask-SQLAlchemy, and VERSION CHECK - June 17, 2025
 import os
 import json
 from datetime import datetime, date
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify # Import Flask here
+import flask # Import the flask module itself to get version
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import pandas as pd
 from io import BytesIO
 from sqlalchemy import inspect # Import inspect for checking table existence
+
+print(f"Application starting. Running with Flask version: {flask.__version__}")
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -227,7 +230,7 @@ class LiftAttempt(db.Model):
         lifter = Lifter.query.get(self.lifter_id) # Fetch lifter to get details
         return {
             'id': self.id,
-            'lifter_id': self.lifer_id,
+            'lifter_id': self.lifter_id,
             'lifter_name': lifter.name if lifter else 'Unknown',
             'lifter_id_number': lifter.lifter_id_number if lifter else 'Unknown',
             'gender': lifter.gender if lifter else 'Unknown',
@@ -923,9 +926,9 @@ def export_meet_data_endpoint():
         with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
             df_lifters.to_excel(writer, sheet_name='Lifters', index=False)
             df_lifts.to_excel(writer, sheet_name='Lift Attempts', index=False)
-            df_weight_classes.to_excel(writer, sheet_name='Weight Classes', index=False)
-            df_age_classes.to_excel(writer, sheet_name='Age Classes', index=False)
-            df_meet_state.to_excel(writer, sheet_name='Meet State', index=False)
+            df_weight_classes.to_excel(writer, sheet_name='WeightClasses', index=False)
+            df_age_classes.to_excel(writer, sheet_name='AgeClasses', index=False)
+            df_meet_state.to_excel(writer, sheet_name='MeetState', index=False)
         
         return jsonify({"message": f"Meet data exported successfully to {file_path}", "file_path": file_path}), 200
 
