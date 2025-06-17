@@ -6,9 +6,7 @@
 
     <!-- Current Meet State & Actions -->
     <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2
-        class="mb-4 flex items-center text-2xl font-semibold text-gray-700"
-      >
+      <h2 class="mb-4 flex items-center text-2xl font-semibold text-gray-700">
         <svg
           class="mr-2 h-6 w-6 text-indigo-600"
           fill="none"
@@ -98,9 +96,7 @@
 
     <!-- Current Active Lift Details -->
     <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2
-        class="mb-4 flex items-center text-2xl font-semibold text-gray-700"
-      >
+      <h2 class="mb-4 flex items-center text-2xl font-semibold text-gray-700">
         <svg
           class="mr-2 h-6 w-6 text-indigo-600"
           fill="none"
@@ -164,9 +160,7 @@
 
     <!-- Pending Lifts in Queue -->
     <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2
-        class="mb-4 flex items-center text-2xl font-semibold text-gray-700"
-      >
+      <h2 class="mb-4 flex items-center text-2xl font-semibold text-gray-700">
         <svg
           class="mr-2 h-6 w-6 text-indigo-600"
           fill="none"
@@ -231,9 +225,7 @@
 
     <!-- Lifter Management -->
     <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2
-        class="mb-4 flex items-center text-2xl font-semibold text-gray-700"
-      >
+      <h2 class="mb-4 flex items-center text-2xl font-semibold text-gray-700">
         <svg
           class="mr-2 h-6 w-6 text-indigo-600"
           fill="none"
@@ -475,9 +467,7 @@
 
     <!-- Class Management -->
     <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2
-        class="mb-4 flex items-center text-2xl font-semibold text-gray-700"
-      >
+      <h2 class="mb-4 flex items-center text-2xl font-semibold text-gray-700">
         <svg
           class="mr-2 h-6 w-6 text-indigo-600"
           fill="none"
@@ -499,7 +489,7 @@
       <div class="mb-6 rounded-md border bg-gray-50 p-4">
         <h3 class="mb-3 text-xl font-semibold text-gray-700">Weight Classes</h3>
         <form
-          class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-4"
+          class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4"
           @submit.prevent="addWeightClass"
         >
           <input
@@ -555,7 +545,7 @@
       <div class="mb-6 rounded-md border bg-gray-50 p-4 mt-8">
         <h3 class="mb-3 text-xl font-semibold text-gray-700">Age Classes</h3>
         <form
-          class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-4"
+          class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4"
           @submit.prevent="addAgeClass"
         >
           <input
@@ -601,7 +591,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { io } from "socket.io-client";
 
 // Reactive state variables
@@ -670,22 +660,22 @@ const overallResultClass = (result) => {
   return "text-orange-500 italic";
 };
 
-// Computed properties for dropdowns to filter available classes for lifters
-const availableWeightClasses = computed(() => (lifter) => {
+// Functions to filter available classes for dropdowns (not computed)
+const availableWeightClasses = (lifter) => {
   return weightClasses.value.filter(
     (wc) =>
       wc.id !== lifter.primary_weight_class_id &&
       !lifter.additional_weight_class_ids.includes(wc.id),
   );
-});
+};
 
-const availableAgeClasses = computed(() => (lifter) => {
+const availableAgeClasses = (lifter) => {
   return ageClasses.value.filter(
     (ac) =>
       ac.id !== lifter.primary_age_class_id &&
       !lifter.additional_age_class_ids.includes(ac.id),
   );
-});
+};
 
 // Helper to get ID by name (needed for removing additional classes by name)
 const getWeightClassIdByName = (name) => {
@@ -1058,7 +1048,9 @@ const exportMeetData = async () => {
   try {
     const response = await fetch(`${BACKEND_API_URL}/export_meet_data`);
     if (response.ok) {
-      alert("Meet data export triggered on backend. Check backend logs for file path.");
+      alert(
+        "Meet data export triggered on backend. Check backend logs for file path.",
+      );
       // In a real application, you'd typically get a downloadable file directly from the response.
       // For now, it just confirms the backend process.
     } else {
@@ -1082,6 +1074,7 @@ onMounted(() => {
   });
 
   socket.on("meet_state_updated", (_data) => {
+    // eslint-disable-next-line no-unused-vars
     // console.log("Meet state updated via Socket.IO:", _data);
     meetState.value = _data;
     fetchCurrentLift(); // Refetch active lift if meet state changes (e.g., attempt or lift type)
@@ -1089,12 +1082,14 @@ onMounted(() => {
   });
 
   socket.on("active_lift_changed", (_data) => {
+    // eslint-disable-next-line no-unused-vars
     // console.log("Active lift changed via Socket.IO:", _data);
     currentLift.value = _data;
     fetchNextLiftsInQueue(); // Active lift changed, so queue might change
   });
 
   socket.on("lift_updated", (_data) => {
+    // eslint-disable-next-line no-unused-vars
     // console.log("Lift updated via Socket.IO:", _data);
     if (currentLift.value && currentLift.value.id === _data.id) {
       currentLift.value = _data; // Update current active lift if it's the one that changed
@@ -1103,11 +1098,13 @@ onMounted(() => {
   });
 
   socket.on("lifter_added", (_data) => {
+    // eslint-disable-next-line no-unused-vars
     // console.log("Lifter added via Socket.IO:", _data);
     fetchLifters(); // Refresh all lifters
   });
 
   socket.on("lifter_updated", (_data) => {
+    // eslint-disable-next-line no-unused-vars
     // console.log("Lifter updated via Socket.IO:", _data);
     fetchLifters(); // Refresh all lifters in case primary/additional classes changed
   });
