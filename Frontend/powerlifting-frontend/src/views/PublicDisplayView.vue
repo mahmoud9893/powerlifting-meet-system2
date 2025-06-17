@@ -119,7 +119,9 @@ export default {
 
     const fetchCurrentLift = async () => {
       try {
-        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/current_lift");
+        const response = await fetch(
+          "process.env.VUE_APP_BACKEND_API_URL/current_lift"
+        );
         if (response.ok) {
           const data = await response.json();
           currentLift.value = data;
@@ -181,7 +183,9 @@ export default {
 
     const fetchMeetState = async () => {
       try {
-        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/meet_state");
+        const response = await fetch(
+          "process.env.VUE_APP_BACKEND_API_URL/meet_state"
+        );
         if (response.ok) {
           const data = await response.json();
           currentMeetState.value = data;
