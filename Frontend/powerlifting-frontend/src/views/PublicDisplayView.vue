@@ -42,21 +42,15 @@
       <div class="judge-scores">
         <div class="judge-score-item">
           <span>Judge 1:</span>
-          <span :class="getScoreClass(currentLift.judge1_score)">{{
-            formatScore(currentLift.judge1_score)
-          }}</span>
+          <span :class="getScoreClass(currentLift.judge1_score)">{{ formatScore(currentLift.judge1_score) }}</span>
         </div>
         <div class="judge-score-item">
           <span>Judge 2:</span>
-          <span :class="getScoreClass(currentLift.judge2_score)">{{
-            formatScore(currentLift.judge2_score)
-          }}</span>
+          <span :class="getScoreClass(currentLift.judge2_score)">{{ formatScore(currentLift.judge2_score) }}</span>
         </div>
         <div class="judge-score-item">
           <span>Judge 3:</span>
-          <span :class="getScoreClass(currentLift.judge3_score)">{{
-            formatScore(currentLift.judge3_score)
-          }}</span>
+          <span :class="getScoreClass(currentLift.judge3_score)">{{ formatScore(currentLift.judge3_score) }}</span>
         </div>
       </div>
 
@@ -76,21 +70,15 @@
         <div class="best-lifts-grid">
           <div class="best-lift-item">
             <span>Squat:</span>
-            <span class="best-lift-value"
-              >{{ bestLifts.squat || "N/A" }} kg</span
-            >
+            <span class="best-lift-value">{{ bestLifts.squat || "N/A" }} kg</span>
           </div>
           <div class="best-lift-item">
             <span>Bench:</span>
-            <span class="best-lift-value"
-              >{{ bestLifts.bench || "N/A" }} kg</span
-            >
+            <span class="best-lift-value">{{ bestLifts.bench || "N/A" }} kg</span>
           </div>
           <div class="best-lift-item">
             <span>Deadlift:</span>
-            <span class="best-lift-value"
-              >{{ bestLifts.deadlift || "N/A" }} kg</span
-            >
+            <span class="best-lift-value">{{ bestLifts.deadlift || "N/A" }} kg</span>
           </div>
         </div>
       </div>
@@ -113,15 +101,13 @@ export default {
     const bestLifts = ref({ squat: null, bench: null, deadlift: null });
     const currentMeetState = ref({
       current_lift_type: "squat",
-      current_attempt_number: 1,
+      current_attempt_number: 1
     });
     let socket = null; // Declare socket here for onUnmounted access
 
     const fetchCurrentLift = async () => {
       try {
-        const response = await fetch(
-          "process.env.VUE_APP_BACKEND_API_URL/current_lift"
-        );
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/current_lift");
         if (response.ok) {
           const data = await response.json();
           currentLift.value = data;
@@ -139,9 +125,7 @@ export default {
 
     const fetchLifterAttempts = async (lifterId) => {
       try {
-        const response = await fetch(
-          `process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/attempts`
-        );
+        const response = await fetch(`process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/attempts`);
         if (response.ok) {
           const attempts = await response.json();
           const newBestLifts = { squat: null, bench: null, deadlift: null };
@@ -150,29 +134,17 @@ export default {
             if (attempt.overall_result === true) {
               // Only count successful lifts
               if (attempt.lift_type === "squat") {
-                newBestLifts.squat = Math.max(
-                  newBestLifts.squat || 0,
-                  attempt.weight_lifted
-                );
+                newBestLifts.squat = Math.max(newBestLifts.squat || 0, attempt.weight_lifted);
               } else if (attempt.lift_type === "bench") {
-                newBestLifts.bench = Math.max(
-                  newBestLifts.bench || 0,
-                  attempt.weight_lifted
-                );
+                newBestLifts.bench = Math.max(newBestLifts.bench || 0, attempt.weight_lifted);
               } else if (attempt.lift_type === "deadlift") {
-                newBestLifts.deadlift = Math.max(
-                  newBestLifts.deadlift || 0,
-                  attempt.weight_lifted
-                );
+                newBestLifts.deadlift = Math.max(newBestLifts.deadlift || 0, attempt.weight_lifted);
               }
             }
           });
           bestLifts.value = newBestLifts;
         } else {
-          console.error(
-            "Failed to fetch lifter attempts:",
-            response.statusText
-          );
+          console.error("Failed to fetch lifter attempts:", response.statusText);
           bestLifts.value = { squat: null, bench: null, deadlift: null };
         }
       } catch (error) {
@@ -183,9 +155,7 @@ export default {
 
     const fetchMeetState = async () => {
       try {
-        const response = await fetch(
-          "process.env.VUE_APP_BACKEND_API_URL/meet_state"
-        );
+        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/meet_state");
         if (response.ok) {
           const data = await response.json();
           currentMeetState.value = data;
@@ -267,9 +237,9 @@ export default {
       bestLifts,
       currentMeetState,
       formatScore,
-      getScoreClass,
+      getScoreClass
     };
-  },
+  }
 };
 </script>
 

@@ -40,10 +40,12 @@
 
         <div class="judge-buttons">
           <button @click="submitScore(true)" class="good-lift-btn">
-            <i class="fas fa-check-circle"></i> Good Lift
+            <i class="fas fa-check-circle"></i>
+            Good Lift
           </button>
           <button @click="submitScore(false)" class="bad-lift-btn">
-            <i class="fas fa-times-circle"></i> No Lift
+            <i class="fas fa-times-circle"></i>
+            No Lift
           </button>
         </div>
 
@@ -51,28 +53,21 @@
           <h3>Current Scores:</h3>
           <p>
             Judge 1:
-            <span :class="getScoreClass(currentLift.judge1_score)">{{
-              formatScore(currentLift.judge1_score)
-            }}</span>
+            <span :class="getScoreClass(currentLift.judge1_score)">{{ formatScore(currentLift.judge1_score) }}</span>
           </p>
           <p>
             Judge 2:
-            <span :class="getScoreClass(currentLift.judge2_score)">{{
-              formatScore(currentLift.judge2_score)
-            }}</span>
+            <span :class="getScoreClass(currentLift.judge2_score)">{{ formatScore(currentLift.judge2_score) }}</span>
           </p>
           <p>
             Judge 3:
-            <span :class="getScoreClass(currentLift.judge3_score)">{{
-              formatScore(currentLift.judge3_score)
-            }}</span>
+            <span :class="getScoreClass(currentLift.judge3_score)">{{ formatScore(currentLift.judge3_score) }}</span>
           </p>
           <p v-if="currentLift.overall_result !== null" class="overall-result">
             Overall:
-            <span
-              :class="currentLift.overall_result ? 'score-good' : 'score-bad'"
-              >{{ currentLift.overall_result ? "GOOD" : "NO LIFT" }}</span
-            >
+            <span :class="currentLift.overall_result ? 'score-good' : 'score-bad'">
+              {{ currentLift.overall_result ? "GOOD" : "NO LIFT" }}
+            </span>
           </p>
         </div>
       </div>
@@ -83,7 +78,8 @@
       <!-- Judge ID display (now auto-assigned/shown after login) -->
       <div class="judge-id-section">
         <p>
-          You are logged in as Judge: <strong>{{ judgeId }}</strong>
+          You are logged in as Judge:
+          <strong>{{ judgeId }}</strong>
         </p>
         <button @click="logout" class="logout-btn">Logout</button>
       </div>
@@ -127,16 +123,13 @@ export default {
       }
 
       try {
-        const response = await fetch(
-          "https://powerlifting-meet-backend.onrender.com/judge_login",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ pin: pinCode.value }),
-          }
-        );
+        const response = await fetch("https://powerlifting-meet-backend.onrender.com/judge_login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ pin: pinCode.value })
+        });
 
         if (response.ok) {
           const data = await response.json();
@@ -175,9 +168,7 @@ export default {
     // Function to fetch the current active lift
     const fetchCurrentLift = async () => {
       try {
-        const response = await fetch(
-          "https://powerlifting-meet-backend.onrender.com/current_lift"
-        );
+        const response = await fetch("https://powerlifting-meet-backend.onrender.com/current_lift");
         if (response.ok) {
           const data = await response.json();
           currentLift.value = data;
@@ -186,20 +177,14 @@ export default {
         }
       } catch (error) {
         console.error("Error fetching current lift:", error);
-        showMessage(
-          "Error fetching current lift. Please check server connection.",
-          "error"
-        );
+        showMessage("Error fetching current lift. Please check server connection.", "error");
       }
     };
 
     // Function to submit a judge's score
     const submitScore = async (score) => {
       if (!isLoggedIn.value || !judgeId.value) {
-        showMessage(
-          "You must be logged in as a Judge to submit scores.",
-          "warning"
-        );
+        showMessage("You must be logged in as a Judge to submit scores.", "warning");
         return;
       }
       if (!currentLift.value) {
@@ -211,19 +196,16 @@ export default {
         const payload = {
           lift_id: currentLift.value.id,
           judge_number: judgeId.value,
-          score: score, // true for good, false for bad
+          score: score // true for good, false for bad
         };
 
-        const response = await fetch(
-          "https://powerlifting-meet-backend.onrender.com/submit_score",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          }
-        );
+        const response = await fetch("https://powerlifting-meet-backend.onrender.com/submit_score", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
 
         if (response.ok) {
           const updatedLift = await response.json();
@@ -233,17 +215,11 @@ export default {
         } else {
           const errorData = await response.json();
           console.error("Failed to submit score:", response.status, errorData);
-          showMessage(
-            `Failed to submit score: ${errorData.error || response.statusText}`,
-            "error"
-          );
+          showMessage(`Failed to submit score: ${errorData.error || response.statusText}`, "error");
         }
       } catch (error) {
         console.error("Error submitting score:", error);
-        showMessage(
-          "Network error or unexpected error while submitting score.",
-          "error"
-        );
+        showMessage("Network error or unexpected error while submitting score.", "error");
       }
     };
 
@@ -318,9 +294,9 @@ export default {
       logout,
       submitScore,
       formatScore,
-      getScoreClass,
+      getScoreClass
     };
-  },
+  }
 };
 </script>
 

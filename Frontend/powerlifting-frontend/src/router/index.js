@@ -8,29 +8,29 @@ const routes = [
   {
     path: "/",
     name: "home",
-    component: HomeView,
+    component: HomeView
   },
   {
     path: "/organizer",
     name: "organizer",
-    component: OrganizerView,
+    component: OrganizerView
   },
   {
     path: "/public",
     name: "public",
-    component: PublicDisplayView,
+    component: PublicDisplayView
   },
   {
     // Judge App Route
     path: "/judge",
     name: "judge",
-    component: JudgeView,
-  },
+    component: JudgeView
+  }
 ];
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
-  routes,
+  routes
 });
 
 export default router;
