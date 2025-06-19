@@ -1,8 +1,6 @@
 <template>
   <div class="organizer-view p-6 bg-gray-100 min-h-screen">
-    <h1 class="mb-6 border-b pb-2 text-3xl font-bold text-gray-800">
-      Organizer Dashboard
-    </h1>
+    <h1 class="mb-6 border-b pb-2 text-3xl font-bold text-gray-800">Organizer Dashboard</h1>
 
     <!-- Current Meet State & Actions -->
     <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
@@ -23,28 +21,21 @@
         </svg>
         Meet State
       </h2>
-      <div
-        v-if="meetState"
-        class="grid grid-cols-1 gap-4 text-lg md:grid-cols-2"
-      >
+      <div v-if="meetState" class="grid grid-cols-1 gap-4 text-lg md:grid-cols-2">
         <p>
           <strong>Current Lift Type:</strong>
-          <span class="capitalize font-medium text-indigo-700">{{
-            meetState.current_lift_type
-          }}</span>
+          <span class="capitalize font-medium text-indigo-700">{{ meetState.current_lift_type }}</span>
         </p>
         <p>
           <strong>Current Attempt:</strong>
-          <span class="font-medium text-indigo-700">{{
-            meetState.current_attempt_number
-          }}</span>
+          <span class="font-medium text-indigo-700">{{ meetState.current_attempt_number }}</span>
         </p>
         <p>
           <strong>Active Lift ID:</strong>
           <span
             :class="{
               'font-medium text-green-600': meetState.current_active_lift_id,
-              'italic text-gray-500': !meetState.current_active_lift_id,
+              'italic text-gray-500': !meetState.current_active_lift_id
             }"
           >
             {{ meetState.current_active_lift_id || "None" }}
@@ -57,39 +48,37 @@
         <h3 class="mb-3 text-xl font-semibold text-gray-700">Control Panel</h3>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
           <button
-            :class="{ 'bg-indigo-700': meetState?.current_lift_type === 'squat' }"
+            :class="{
+              'bg-indigo-700': meetState?.current_lift_type === 'squat'
+            }"
             class="btn-primary"
             @click="changeLiftType('squat')"
           >
             Set Squat
           </button>
           <button
-            :class="{ 'bg-indigo-700': meetState?.current_lift_type === 'bench' }"
+            :class="{
+              'bg-indigo-700': meetState?.current_lift_type === 'bench'
+            }"
             class="btn-primary"
             @click="changeLiftType('bench')"
           >
             Set Bench
           </button>
           <button
-            :class="{ 'bg-indigo-700': meetState?.current_lift_type === 'deadlift' }"
+            :class="{
+              'bg-indigo-700': meetState?.current_lift_type === 'deadlift'
+            }"
             class="btn-primary"
             @click="changeLiftType('deadlift')"
           >
             Set Deadlift
           </button>
-          <button
-            :disabled="meetState?.current_attempt_number === 3"
-            class="btn-secondary"
-            @click="advanceAttempt"
-          >
+          <button :disabled="meetState?.current_attempt_number === 3" class="btn-secondary" @click="advanceAttempt">
             Advance Attempt ({{ meetState?.current_attempt_number || 0 }}/3)
           </button>
-          <button class="btn-success" @click="setActiveLift(null)">
-            Auto Set Next Active Lift
-          </button>
-          <button class="btn-info" @click="exportMeetData">
-            Export Meet Data (Excel)
-          </button>
+          <button class="btn-success" @click="setActiveLift(null)">Auto Set Next Active Lift</button>
+          <button class="btn-info" @click="exportMeetData">Export Meet Data (Excel)</button>
         </div>
       </div>
     </div>
@@ -105,18 +94,11 @@
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M13 10V3L4 14h7v7l9-11h-7z"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+          <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
         Current Active Lift
       </h2>
-      <div
-        v-if="currentLift"
-        class="rounded-md border border-indigo-200 bg-indigo-50 p-4"
-      >
+      <div v-if="currentLift" class="rounded-md border border-indigo-200 bg-indigo-50 p-4">
         <p class="mb-2 text-xl font-bold text-indigo-800">
           {{ currentLift.lifter_name }} ({{ currentLift.lifter_id_number }}) -
           {{ currentLift.lift_type.toUpperCase() }}
@@ -131,27 +113,21 @@
         <div class="mt-3">
           <p>
             Judge 1:
-            <span :class="scoreClass(currentLift.judge1_score)">{{
-              formatScore(currentLift.judge1_score)
-            }}</span>
+            <span :class="scoreClass(currentLift.judge1_score)">{{ formatScore(currentLift.judge1_score) }}</span>
           </p>
           <p>
             Judge 2:
-            <span :class="scoreClass(currentLift.judge2_score)">{{
-              formatScore(currentLift.judge2_score)
-            }}</span>
+            <span :class="scoreClass(currentLift.judge2_score)">{{ formatScore(currentLift.judge2_score) }}</span>
           </p>
           <p>
             Judge 3:
-            <span :class="scoreClass(currentLift.judge3_score)">{{
-              formatScore(currentLift.judge3_score)
-            }}</span>
+            <span :class="scoreClass(currentLift.judge3_score)">{{ formatScore(currentLift.judge3_score) }}</span>
           </p>
           <p class="mt-2 font-bold">
             Overall Result:
-            <span :class="overallResultClass(currentLift.overall_result)">{{
-              formatOverallResult(currentLift.overall_result)
-            }}</span>
+            <span :class="overallResultClass(currentLift.overall_result)">
+              {{ formatOverallResult(currentLift.overall_result) }}
+            </span>
           </p>
         </div>
       </div>
@@ -169,58 +145,39 @@
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        Next Lifts in Queue ({{ meetState?.current_lift_type }} - Attempt
-        {{ meetState?.current_attempt_number }})
+        Next Lifts in Queue ({{ meetState?.current_lift_type }} - Attempt {{ meetState?.current_attempt_number }})
       </h2>
       <div v-if="nextLiftsInQueue.length > 0">
         <div class="overflow-x-auto">
           <table class="min-w-full border border-gray-200 bg-white">
             <thead>
-              <tr
-                class="bg-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-600"
-              >
-                <th class="border-b-2 border-gray-200 px-6 py-3">
-                  Lifter Name
-                </th>
+              <tr class="bg-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                <th class="border-b-2 border-gray-200 px-6 py-3">Lifter Name</th>
                 <th class="border-b-2 border-gray-200 px-6 py-3">Lifter ID</th>
                 <th class="border-b-2 border-gray-200 px-6 py-3">Weight</th>
                 <th class="border-b-2 border-gray-200 px-6 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="lift in nextLiftsInQueue"
-                :key="lift.id"
-                class="hover:bg-gray-50"
-              >
+              <tr v-for="lift in nextLiftsInQueue" :key="lift.id" class="hover:bg-gray-50">
                 <td class="border-b border-gray-200 px-6 py-4">
                   {{ lift.lifter_name }}
                 </td>
                 <td class="border-b border-gray-200 px-6 py-4">
                   {{ lift.lifter_id_number }}
                 </td>
+                <td class="border-b border-gray-200 px-6 py-4">{{ lift.weight_lifted }} kg</td>
                 <td class="border-b border-gray-200 px-6 py-4">
-                  {{ lift.weight_lifted }} kg
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                  <button class="btn-small-primary" @click="setActiveLift(lift.id)">
-                    Set Active
-                  </button>
+                  <button class="btn-small-primary" @click="setActiveLift(lift.id)">Set Active</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-      <div v-else class="italic text-gray-600">
-        No pending lifts for the current type and attempt.
-      </div>
+      <div v-else class="italic text-gray-600">No pending lifts for the current type and attempt.</div>
     </div>
 
     <!-- Lifter Management -->
@@ -245,29 +202,14 @@
 
       <div class="mb-6 rounded-md border bg-gray-50 p-4">
         <h3 class="mb-3 text-xl font-semibold text-gray-700">Add New Lifter</h3>
-        <form
-          class="grid grid-cols-1 gap-4 md:grid-cols-2"
-          @submit.prevent="addLifter"
-        >
-          <input
-            v-model="newLifter.name"
-            class="form-input"
-            placeholder="Name"
-            required
-            type="text"
-          />
+        <form class="grid grid-cols-1 gap-4 md:grid-cols-2" @submit.prevent="addLifter">
+          <input v-model="newLifter.name" class="form-input" placeholder="Name" required type="text" />
           <select v-model="newLifter.gender" class="form-select" required>
             <option value="" disabled>Select Gender</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
           </select>
-          <input
-            v-model="newLifter.lifter_id_number"
-            class="form-input"
-            placeholder="Lifter ID"
-            required
-            type="text"
-          />
+          <input v-model="newLifter.lifter_id_number" class="form-input" placeholder="Lifter ID" required type="text" />
           <input
             v-model.number="newLifter.actual_weight"
             class="form-input"
@@ -276,13 +218,7 @@
             step="0.01"
             type="number"
           />
-          <input
-            v-model="newLifter.birth_date"
-            class="form-input"
-            placeholder="Birth Date"
-            required
-            type="date"
-          />
+          <input v-model="newLifter.birth_date" class="form-input" placeholder="Birth Date" required type="date" />
           <input
             v-model.number="newLifter.opener_squat"
             class="form-input"
@@ -307,21 +243,15 @@
             step="0.01"
             type="number"
           />
-          <button class="btn-primary col-span-full" type="submit">
-            Add Lifter
-          </button>
+          <button class="btn-primary col-span-full" type="submit">Add Lifter</button>
         </form>
       </div>
 
-      <h3 class="mb-3 mt-8 text-xl font-semibold text-gray-700">
-        All Registered Lifters
-      </h3>
+      <h3 class="mb-3 mt-8 text-xl font-semibold text-gray-700">All Registered Lifters</h3>
       <div v-if="allLifters.length > 0" class="overflow-x-auto">
         <table class="min-w-full border border-gray-200 bg-white">
           <thead>
-            <tr
-              class="bg-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-600"
-            >
+            <tr class="bg-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
               <th class="border-b-2 border-gray-200 px-6 py-3">Name</th>
               <th class="border-b-2 border-gray-200 px-6 py-3">ID</th>
               <th class="border-b-2 border-gray-200 px-6 py-3">Gender</th>
@@ -335,11 +265,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="lifter in allLifters"
-              :key="lifter.id"
-              class="hover:bg-gray-50"
-            >
+            <tr v-for="lifter in allLifters" :key="lifter.id" class="hover:bg-gray-50">
               <td class="border-b border-gray-200 px-6 py-4">
                 {{ lifter.name }}
               </td>
@@ -352,9 +278,7 @@
               <td class="border-b border-gray-200 px-6 py-4">
                 {{ lifter.age }}
               </td>
-              <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.actual_weight }} kg
-              </td>
+              <td class="border-b border-gray-200 px-6 py-4">{{ lifter.actual_weight }} kg</td>
               <td class="border-b border-gray-200 px-6 py-4">
                 {{ lifter.primary_weight_class_name }}
               </td>
@@ -362,28 +286,16 @@
                 {{ lifter.primary_age_class_name }}
               </td>
               <td class="border-b border-gray-200 px-6 py-4">
-                <select
-                  v-model="lifter.selectedAdditionalWeightClass"
-                  class="form-select p-1 text-sm"
-                >
+                <select v-model="lifter.selectedAdditionalWeightClass" class="form-select p-1 text-sm">
                   <option :value="null">Add Class</option>
-                  <option
-                    v-for="wc in availableWeightClasses(lifter)"
-                    :key="wc.id"
-                    :value="wc.id"
-                  >
+                  <option v-for="wc in availableWeightClasses(lifter)" :key="wc.id" :value="wc.id">
                     {{ wc.name }}
                   </option>
                 </select>
                 <button
                   :disabled="!lifter.selectedAdditionalWeightClass"
                   class="btn-small-secondary mt-1"
-                  @click="
-                    addAdditionalWeightClass(
-                      lifter.id,
-                      lifter.selectedAdditionalWeightClass,
-                    )
-                  "
+                  @click="addAdditionalWeightClass(lifter.id, lifter.selectedAdditionalWeightClass)"
                 >
                   Add
                 </button>
@@ -396,12 +308,7 @@
                     {{ wcName }}
                     <button
                       class="ml-1 font-bold text-blue-600 hover:text-blue-900"
-                      @click="
-                        removeAdditionalWeightClass(
-                          lifter.id,
-                          getWeightClassIdByName(wcName),
-                        )
-                      "
+                      @click="removeAdditionalWeightClass(lifter.id, getWeightClassIdByName(wcName))"
                     >
                       &times;
                     </button>
@@ -409,28 +316,16 @@
                 </div>
               </td>
               <td class="border-b border-gray-200 px-6 py-4">
-                <select
-                  v-model="lifter.selectedAdditionalAgeClass"
-                  class="form-select p-1 text-sm"
-                >
+                <select v-model="lifter.selectedAdditionalAgeClass" class="form-select p-1 text-sm">
                   <option :value="null">Add Class</option>
-                  <option
-                    v-for="ac in availableAgeClasses(lifter)"
-                    :key="ac.id"
-                    :value="ac.id"
-                  >
+                  <option v-for="ac in availableAgeClasses(lifter)" :key="ac.id" :value="ac.id">
                     {{ ac.name }}
                   </option>
                 </select>
                 <button
                   :disabled="!lifter.selectedAdditionalAgeClass"
                   class="btn-small-secondary mt-1"
-                  @click="
-                    addAdditionalAgeClass(
-                      lifter.id,
-                      lifter.selectedAdditionalAgeClass,
-                    )
-                  "
+                  @click="addAdditionalAgeClass(lifter.id, lifter.selectedAdditionalAgeClass)"
                 >
                   Add
                 </button>
@@ -443,12 +338,7 @@
                     {{ acName }}
                     <button
                       class="ml-1 font-bold text-purple-600 hover:text-purple-900"
-                      @click="
-                        removeAdditionalAgeClass(
-                          lifter.id,
-                          getAgeClassIdByName(acName),
-                        )
-                      "
+                      @click="removeAdditionalAgeClass(lifter.id, getAgeClassIdByName(acName))"
                     >
                       &times;
                     </button>
@@ -488,10 +378,7 @@
       <!-- Weight Class Management -->
       <div class="mb-6 rounded-md border bg-gray-50 p-4">
         <h3 class="mb-3 text-xl font-semibold text-gray-700">Weight Classes</h3>
-        <form
-          class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4"
-          @submit.prevent="addWeightClass"
-        >
+        <form class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4" @submit.prevent="addWeightClass">
           <input
             v-model="newWeightClass.name"
             class="form-input"
@@ -520,23 +407,14 @@
             <option value="Female">Female</option>
             <option value="Both">Both</option>
           </select>
-          <button class="btn-primary col-span-full" type="submit">
-            Add Weight Class
-          </button>
+          <button class="btn-primary col-span-full" type="submit">Add Weight Class</button>
         </form>
         <ul class="list-disc pl-5">
-          <li
-            v-for="wc in weightClasses"
-            :key="wc.id"
-            class="flex items-center justify-between py-1"
-          >
-            {{ wc.name }} ({{ wc.min_weight }}kg -
-            {{ wc.max_weight ? wc.max_weight + "kg" : "Open" }}) [{{
+          <li v-for="wc in weightClasses" :key="wc.id" class="flex items-center justify-between py-1">
+            {{ wc.name }} ({{ wc.min_weight }}kg - {{ wc.max_weight ? wc.max_weight + "kg" : "Open" }}) [{{
               wc.gender
             }}]
-            <button class="btn-small-danger" @click="deleteWeightClass(wc.id)">
-              Delete
-            </button>
+            <button class="btn-small-danger" @click="deleteWeightClass(wc.id)">Delete</button>
           </li>
         </ul>
       </div>
@@ -544,10 +422,7 @@
       <!-- Age Class Management -->
       <div class="mb-6 rounded-md border bg-gray-50 p-4 mt-8">
         <h3 class="mb-3 text-xl font-semibold text-gray-700">Age Classes</h3>
-        <form
-          class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4"
-          @submit.prevent="addAgeClass"
-        >
+        <form class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4" @submit.prevent="addAgeClass">
           <input
             v-model="newAgeClass.name"
             class="form-input"
@@ -555,34 +430,19 @@
             required
             type="text"
           />
-          <input
-            v-model.number="newAgeClass.min_age"
-            class="form-input"
-            placeholder="Min Age"
-            required
-            type="number"
-          />
+          <input v-model.number="newAgeClass.min_age" class="form-input" placeholder="Min Age" required type="number" />
           <input
             v-model.number="newAgeClass.max_age"
             class="form-input"
             placeholder="Max Age (optional)"
             type="number"
           />
-          <button class="btn-primary col-span-full" type="submit">
-            Add Age Class
-          </button>
+          <button class="btn-primary col-span-full" type="submit">Add Age Class</button>
         </form>
         <ul class="list-disc pl-5">
-          <li
-            v-for="ac in ageClasses"
-            :key="ac.id"
-            class="flex items-center justify-between py-1"
-          >
-            {{ ac.name }} ({{ ac.min_age }} -
-            {{ ac.max_age ? ac.max_age + " years" : "Open" }})
-            <button class="btn-small-danger" @click="deleteAgeClass(ac.id)">
-              Delete
-            </button>
+          <li v-for="ac in ageClasses" :key="ac.id" class="flex items-center justify-between py-1">
+            {{ ac.name }} ({{ ac.min_age }} - {{ ac.max_age ? ac.max_age + " years" : "Open" }})
+            <button class="btn-small-danger" @click="deleteAgeClass(ac.id)">Delete</button>
           </li>
         </ul>
       </div>
@@ -610,27 +470,25 @@ const newLifter = ref({
   birth_date: "",
   opener_squat: null,
   opener_bench: null,
-  opener_deadlift: null,
+  opener_deadlift: null
 });
 
 const newWeightClass = ref({
   name: "",
   min_weight: null,
   max_weight: null,
-  gender: "",
+  gender: ""
 });
 
 const newAgeClass = ref({
   name: "",
   min_age: null,
-  max_age: null,
+  max_age: null
 });
 
 // Determine API URL based on environment
-const BACKEND_API_URL =
-  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
-const SOCKET_IO_URL =
-  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
+const BACKEND_API_URL = process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
+const SOCKET_IO_URL = process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
 
 // Initialize Socket.IO connection
 const socket = io(SOCKET_IO_URL);
@@ -663,17 +521,13 @@ const overallResultClass = (result) => {
 // Functions to filter available classes for dropdowns (not computed)
 const availableWeightClasses = (lifter) => {
   return weightClasses.value.filter(
-    (wc) =>
-      wc.id !== lifter.primary_weight_class_id &&
-      !lifter.additional_weight_class_ids.includes(wc.id),
+    (wc) => wc.id !== lifter.primary_weight_class_id && !lifter.additional_weight_class_ids.includes(wc.id)
   );
 };
 
 const availableAgeClasses = (lifter) => {
   return ageClasses.value.filter(
-    (ac) =>
-      ac.id !== lifter.primary_age_class_id &&
-      !lifter.additional_age_class_ids.includes(ac.id),
+    (ac) => ac.id !== lifter.primary_age_class_id && !lifter.additional_age_class_ids.includes(ac.id)
   );
 };
 
@@ -706,7 +560,7 @@ const fetchLifters = async () => {
     allLifters.value = data.map((lifter) => ({
       ...lifter,
       selectedAdditionalWeightClass: null,
-      selectedAdditionalAgeClass: null,
+      selectedAdditionalAgeClass: null
     }));
   } catch (error) {
     alert("Error fetching lifters. See console for details.");
@@ -739,7 +593,7 @@ const fetchNextLiftsInQueue = async () => {
           (lift) =>
             lift.status === "pending" &&
             lift.lift_type === meetState.value?.current_lift_type &&
-            lift.attempt_number === meetState.value?.current_attempt_number,
+            lift.attempt_number === meetState.value?.current_attempt_number
         )
         .sort((a, b) => {
           // Sort by weight_lifted (ascending), then by lifter_id_number (ascending)
@@ -782,7 +636,7 @@ const changeLiftType = async (liftType) => {
     const response = await fetch(`${BACKEND_API_URL}/meet_state`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ current_lift_type: liftType }),
+      body: JSON.stringify({ current_lift_type: liftType })
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -797,7 +651,7 @@ const advanceAttempt = async () => {
   try {
     const response = await fetch(`${BACKEND_API_URL}/meet_state/advance_attempt`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" }
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -813,7 +667,7 @@ const addLifter = async () => {
     const response = await fetch(`${BACKEND_API_URL}/lifters`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newLifter.value),
+      body: JSON.stringify(newLifter.value)
     });
     if (response.ok) {
       newLifter.value = {
@@ -824,7 +678,7 @@ const addLifter = async () => {
         birth_date: "",
         opener_squat: null,
         opener_bench: null,
-        opener_deadlift: null,
+        opener_deadlift: null
       };
       await fetchLifters(); // Refresh lifters after adding
     } else {
@@ -842,7 +696,7 @@ const setActiveLift = async (liftId) => {
     const response = await fetch(`${BACKEND_API_URL}/set_active_lift`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -858,14 +712,14 @@ const addWeightClass = async () => {
     const response = await fetch(`${BACKEND_API_URL}/weight_classes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newWeightClass.value),
+      body: JSON.stringify(newWeightClass.value)
     });
     if (response.ok) {
       newWeightClass.value = {
         name: "",
         min_weight: null,
         max_weight: null,
-        gender: "",
+        gender: ""
       };
       fetchWeightClasses(); // Refresh list
       fetchLifters(); // Lifters might be re-assigned, refresh them too
@@ -879,16 +733,12 @@ const addWeightClass = async () => {
 };
 
 const deleteWeightClass = async (wcId) => {
-  if (
-    !confirm(
-      "Are you sure you want to delete this weight class? This cannot be undone if lifters are assigned!",
-    )
-  ) {
+  if (!confirm("Are you sure you want to delete this weight class? This cannot be undone if lifters are assigned!")) {
     return;
   }
   try {
     const response = await fetch(`${BACKEND_API_URL}/weight_classes/${wcId}`, {
-      method: "DELETE",
+      method: "DELETE"
     });
     if (response.ok) {
       fetchWeightClasses();
@@ -907,7 +757,7 @@ const addAgeClass = async () => {
     const response = await fetch(`${BACKEND_API_URL}/age_classes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newAgeClass.value),
+      body: JSON.stringify(newAgeClass.value)
     });
     if (response.ok) {
       newAgeClass.value = { name: "", min_age: null, max_age: null };
@@ -923,16 +773,12 @@ const addAgeClass = async () => {
 };
 
 const deleteAgeClass = async (acId) => {
-  if (
-    !confirm(
-      "Are you sure you want to delete this age class? This cannot be undone if lifters are assigned!",
-    )
-  ) {
+  if (!confirm("Are you sure you want to delete this age class? This cannot be undone if lifters are assigned!")) {
     return;
   }
   try {
     const response = await fetch(`${BACKEND_API_URL}/age_classes/${acId}`, {
-      method: "DELETE",
+      method: "DELETE"
     });
     if (response.ok) {
       fetchAgeClasses();
@@ -949,19 +795,14 @@ const deleteAgeClass = async (acId) => {
 const addAdditionalWeightClass = async (lifterId, weightClassId) => {
   if (!weightClassId) return;
   try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/add_additional_weight_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight_class_id: weightClassId }),
-      },
-    );
+    const response = await fetch(`${BACKEND_API_URL}/lifters/${lifterId}/add_additional_weight_class`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weight_class_id: weightClassId })
+    });
     if (!response.ok) {
       const errorData = await response.json();
-      alert(
-        `Failed to add additional weight class: ${errorData.error || response.statusText}`,
-      );
+      alert(`Failed to add additional weight class: ${errorData.error || response.statusText}`);
     } else {
       fetchLifters(); // Refresh lifter data
     }
@@ -975,19 +816,14 @@ const removeAdditionalWeightClass = async (lifterId, weightClassId) => {
     return;
   }
   try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/remove_additional_weight_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight_class_id: weightClassId }),
-      },
-    );
+    const response = await fetch(`${BACKEND_API_URL}/lifters/${lifterId}/remove_additional_weight_class`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weight_class_id: weightClassId })
+    });
     if (!response.ok) {
       const errorData = await response.json();
-      alert(
-        `Failed to remove additional weight class: ${errorData.error || response.statusText}`,
-      );
+      alert(`Failed to remove additional weight class: ${errorData.error || response.statusText}`);
     } else {
       fetchLifters(); // Refresh lifter data
     }
@@ -999,14 +835,11 @@ const removeAdditionalWeightClass = async (lifterId, weightClassId) => {
 const addAdditionalAgeClass = async (lifterId, ageClassId) => {
   if (!ageClassId) return;
   try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/add_additional_age_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age_class_id: ageClassId }),
-      },
-    );
+    const response = await fetch(`${BACKEND_API_URL}/lifters/${lifterId}/add_additional_age_class`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ age_class_id: ageClassId })
+    });
     if (!response.ok) {
       const errorData = await response.json();
       alert(`Failed to add additional age class: ${errorData.error || response.statusText}`);
@@ -1023,19 +856,14 @@ const removeAdditionalAgeClass = async (lifterId, ageClassId) => {
     return;
   }
   try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/remove_additional_age_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age_class_id: ageClassId }),
-      },
-    );
+    const response = await fetch(`${BACKEND_API_URL}/lifters/${lifterId}/remove_additional_age_class`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ age_class_id: ageClassId })
+    });
     if (!response.ok) {
       const errorData = await response.json();
-      alert(
-        `Failed to remove additional age class: ${errorData.error || response.statusText}`,
-      );
+      alert(`Failed to remove additional age class: ${errorData.error || response.statusText}`);
     } else {
       fetchLifters(); // Refresh lifter data
     }
@@ -1048,9 +876,7 @@ const exportMeetData = async () => {
   try {
     const response = await fetch(`${BACKEND_API_URL}/export_meet_data`);
     if (response.ok) {
-      alert(
-        "Meet data export triggered on backend. Check backend logs for file path.",
-      );
+      alert("Meet data export triggered on backend. Check backend logs for file path.");
       // In a real application, you'd typically get a downloadable file directly from the response.
       // For now, it just confirms the backend process.
     } else {
@@ -1074,7 +900,6 @@ onMounted(() => {
   });
 
   socket.on("meet_state_updated", (_data) => {
-    // eslint-disable-next-line no-unused-vars
     // console.log("Meet state updated via Socket.IO:", _data);
     meetState.value = _data;
     fetchCurrentLift(); // Refetch active lift if meet state changes (e.g., attempt or lift type)
@@ -1082,14 +907,12 @@ onMounted(() => {
   });
 
   socket.on("active_lift_changed", (_data) => {
-    // eslint-disable-next-line no-unused-vars
     // console.log("Active lift changed via Socket.IO:", _data);
     currentLift.value = _data;
     fetchNextLiftsInQueue(); // Active lift changed, so queue might change
   });
 
   socket.on("lift_updated", (_data) => {
-    // eslint-disable-next-line no-unused-vars
     // console.log("Lift updated via Socket.IO:", _data);
     if (currentLift.value && currentLift.value.id === _data.id) {
       currentLift.value = _data; // Update current active lift if it's the one that changed
@@ -1097,15 +920,13 @@ onMounted(() => {
     fetchNextLiftsInQueue(); // A lift status changed, so queue might need refresh
   });
 
-  socket.on("lifter_added", (_data) => {
-    // eslint-disable-next-line no-unused-vars
-    // console.log("Lifter added via Socket.IO:", _data);
+  socket.on("lifter_added", () => {
+    // console.log("Lifter added via Socket.IO:"); // No data parameter needed here
     fetchLifters(); // Refresh all lifters
   });
 
-  socket.on("lifter_updated", (_data) => {
-    // eslint-disable-next-line no-unused-vars
-    // console.log("Lifter updated via Socket.IO:", _data);
+  socket.on("lifter_updated", () => {
+    // console.log("Lifter updated via Socket.IO:"); // No data parameter needed here
     fetchLifters(); // Refresh all lifters in case primary/additional classes changed
   });
 });
