@@ -79,8 +79,7 @@
             Overall:
             <span
               :class="currentLift.overall_result ? 'text-green-700' : 'text-red-700'"
-              >{{ currentLift.overall_result ? "GOOD" : "NO LIFT" }}</span
-            >
+              >{{ currentLift.overall_result ? "GOOD" : "NO LIFT" }}</span>
           </p>
           <p v-else class="overall-result text-2xl font-bold mt-4 text-left text-orange-500">
             Overall: PENDING

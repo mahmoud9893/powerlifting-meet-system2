@@ -13,11 +13,13 @@
           stroke="currentColor"
           stroke-width="2"
           viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg">
+          xmlns="http://www.w3.org/2000/svg"
+>
           <path
             d="M9 19V6l-5 4V21M9 19c-3.111 0-7-1.488-7-4s1.956-2 7-2m0 0v-5c0 1.25.968 2.5 3 2.5s3-1.25 3-2.5V4m0 0c0 1.25.968 2.5 3 2.5s3-1.25 3-2.5V4m-3 10v-4m-3 4v-4"
             stroke-linecap="round"
-            stroke-linejoin="round" />
+            stroke-linejoin="round"
+/>
         </svg>
         Meet Progress
       </h2>
@@ -39,7 +41,8 @@
           <span :class="{
             'text-green-400 font-semibold': meetState.current_active_lift_id,
             'text-gray-500 italic': !meetState.current_active_lift_id,
-          }">
+          }"
+>
             {{ meetState.current_active_lift_id || "None" }}
           </span>
         </p>
@@ -56,17 +59,20 @@
           stroke="currentColor"
           stroke-width="2"
           viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg">
+          xmlns="http://www.w3.org/2000/svg"
+>
           <path
             d="M13 10V3L4 14h7v7l9-11h-7z"
             stroke-linecap="round"
-            stroke-linejoin="round" />
+            stroke-linejoin="round"
+/>
         </svg>
         On The Platform
       </h2>
       <div
         v-if="currentLift"
-        class="bg-indigo-700 p-6 rounded-md border-2 border-indigo-500 text-center">
+        class="bg-indigo-700 p-6 rounded-md border-2 border-indigo-500 text-center"
+>
         <p class="text-4xl font-extrabold mb-2 text-white">
           {{ currentLift.lifter_name }}
         </p>
@@ -124,11 +130,13 @@
           stroke="currentColor"
           stroke-width="2"
           viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg">
+          xmlns="http://www.w3.org/2000/svg"
+>
           <path
             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
             stroke-linecap="round"
-            stroke-linejoin="round" />
+            stroke-linejoin="round"
+/>
         </svg>
         Upcoming Lifts ({{ meetState?.current_lift_type }} - Attempt
         {{ meetState?.current_attempt_number }})
@@ -138,7 +146,8 @@
           <table class="min-w-full bg-gray-700 text-white rounded-lg overflow-hidden text-lg">
             <thead class="bg-gray-600">
               <tr
-                class="text-left text-sm font-semibold uppercase tracking-wider text-gray-300">
+                class="text-left text-sm font-semibold uppercase tracking-wider text-gray-300"
+>
                 <th class="px-6 py-3">Lifter Name</th>
                 <th class="px-6 py-3">Lifter ID</th>
                 <th class="px-6 py-3">Weight</th>
@@ -148,7 +157,8 @@
               <tr
                 v-for="lift in nextLiftsInQueue"
                 :key="lift.id"
-                class="border-t border-gray-600 hover:bg-gray-600">
+                class="border-t border-gray-600 hover:bg-gray-600"
+>
                 <td class="px-6 py-4">{{ lift.lifter_name }}</td>
                 <td class="px-6 py-4">{{ lift.lifter_id_number }}</td>
                 <td class="px-6 py-4">{{ lift.weight_lifted }} kg</td>
