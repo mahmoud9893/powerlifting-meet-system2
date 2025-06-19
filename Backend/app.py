@@ -12,9 +12,10 @@ from datetime import datetime, date
 app = Flask(__name__)
 
 # Configure CORS to allow requests from your Netlify frontend
-# Replace 'https://powerlifting-meet-systemeg.netlify.app/' with your actual Netlify frontend URL if it's different
-# If you have multiple origins, you can provide a list: origins=["https://netlify.app", "http://localhost:8080"]
-CORS(app, resources={r"/*": {"origins": "https://powerlifting-meet-systemeg.netlify.app/"}})
+# Make sure this matches your deployed Netlify URL
+# If you also develop locally, you can add "http://localhost:8080" to the list
+FRONTEND_ORIGINS = ["https://powerlifting-meet-systemeg.netlify.app"]
+CORS(app, resources={r"/*": {"origins": FRONTEND_ORIGINS}})
 
 # Configure database
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
@@ -22,12 +23,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Initialize SocketIO
-# Ensure CORS is also configured for SocketIO if it's not handled by Flask-CORS for all routes
-# For SocketIO, you might need to specify the cors_allowed_origins parameter.
-# It's better to explicitly set it here for SocketIO:
-socketio = SocketIO(app, cors_allowed_origins="https://powerlifting-meet-systemeg.netlify.app/")
-
-# Your existing models and routes go here...
+# Ensure CORS is also configured for SocketIO
+socketio = SocketIO(app, cors_allowed_origins=FRONTEND_ORIGINS)
 
 # Example: Judge PINs (replace with secure storage in production)
 JUDGE_PINS = {
@@ -643,8 +640,7 @@ def test_connect():
 def test_disconnect():
     print('Client disconnected')
 
-# Initial database setup
-@app.before_first_request
+# Initial database setup function
 def create_tables():
     with app.app_context():
         db.create_all()
@@ -689,47 +685,14 @@ def create_tables():
             db.session.commit()
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all() # Ensure tables are created when run directly
-        if not MeetState.query.first():
-            db.session.add(MeetState(current_lift_type='squat', current_attempt_number=1))
-            db.session.commit()
-        if not WeightClass.query.first():
-             # Default weight classes if needed for local testing
-            db.session.add_all([
-                WeightClass(name="Men's 59kg", min_weight=0, max_weight=59, gender="Male"),
-                WeightClass(name="Men's 66kg", min_weight=59.01, max_weight=66, gender="Male"),
-                WeightClass(name="Men's 74kg", min_weight=66.01, max_weight=74, gender="Male"),
-                WeightClass(name="Men's 83kg", min_weight=74.01, max_weight=83, gender="Male"),
-                WeightClass(name="Men's 93kg", min_weight=83.01, max_weight=93, gender="Male"),
-                WeightClass(name="Men's 105kg", min_weight=93.01, max_weight=105, gender="Male"),
-                WeightClass(name="Men's 120kg", min_weight=105.01, max_weight=120, gender="Male"),
-                WeightClass(name="Men's 120+kg", min_weight=120.01, max_weight=None, gender="Male"),
-                WeightClass(name="Women's 47kg", min_weight=0, max_weight=47, gender="Female"),
-                WeightClass(name="Women's 52kg", min_weight=47.01, max_weight=52, gender="Female"),
-                WeightClass(name="Women's 57kg", min_weight=52.01, max_weight=57, gender="Female"),
-                WeightClass(name="Women's 63kg", min_weight=57.01, max_weight=63, gender="Female"),
-                WeightClass(name="Women's 69kg", min_weight=63.01, max_weight=69, gender="Female"),
-                WeightClass(name="Women's 76kg", min_weight=69.01, max_weight=76, gender="Female"),
-                WeightClass(name="Women's 84kg", min_weight=76.01, max_weight=84, gender="Female"),
-                WeightClass(name="Women's 84+kg", min_weight=84.01, max_weight=None, gender="Female")
-            ])
-            db.session.commit()
-        if not AgeClass.query.first():
-            # Default age classes if needed for local testing
-            db.session.add_all([
-                AgeClass(name="Sub-Junior", min_age=14, max_age=18),
-                AgeClass(name="Junior", min_age=19, max_age=23),
-                AgeClass(name="Open", min_age=24, max_age=39),
-                AgeClass(name="Master I", min_age=40, max_age=49),
-                AgeClass(name="Master II", min_age=50, max_age=59),
-                AgeClass(name="Master III", min_age=60, max_age=69),
-                AgeClass(name="Master IV", min_age=70, max_age=None)
-            ])
-            db.session.commit()
-
-    # socketio.run(app, debug=True) # For local development
-    # For production on Render, Gunicorn or similar WSGI server will run the app
-    # If running locally without Gunicorn/waitress for testing:
+    # Call create_tables directly when the app is run
+    create_tables()
+    
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True) # allow_unsafe_werkzeug for dev, remove in prod with gunicorn
+    # Note: When deploying with Gunicorn on Render, you typically configure Gunicorn
+    # to run your app directly (e.g., `gunicorn app:app`). The socketio.run()
+    # below is primarily for local development or if Render's start command
+    # explicitly runs this file. Render's standard Gunicorn config might not
+    # use this part. However, having `create_tables()` called here ensures
+    # the database is initialized.
+    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
