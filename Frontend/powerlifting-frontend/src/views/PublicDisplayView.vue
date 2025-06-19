@@ -1,549 +1,307 @@
 <template>
-  <div class="public-display-container">
-    <!-- Add your logo/flag here, for example, right after the main heading -->
-    <img
-      src="C:\Users\MBR\Documents\PowerliftingApp\Frontend\Public\Images\309183211_398500805821088_2233664516381151015_n.jpg"
-      alt="Meet Logo"
-      class="meet-logo"
-      onerror="this.onerror=null;this.src='https://placehold.co/150x150/cccccc/333333?text=Logo';"
-    />
-    <!-- Or for a flag:
-    <img
-      src="/images/your-flag.png"
-      alt="Country Flag"
-      class="country-flag"
-      onerror="this.onerror=null;this.src='https://placehold.co/100x60/cccccc/333333?text=Flag';"
-    />
-    -->
+  <div class="public-display-view p-6 bg-gray-900 min-h-screen text-white">
+    <h1 class="text-4xl font-extrabold text-indigo-400 mb-6 border-b-4 border-indigo-500 pb-2">
+      Live Meet Display
+    </h1>
 
-    <h1>Live Lift Board</h1>
-
-    <div class="meet-state-info">
-      <p>
-        Current Lift Type:
-        <strong>{{ currentMeetState.current_lift_type.toUpperCase() }}</strong>
-      </p>
-      <p>
-        Current Attempt:
-        <strong>{{ currentMeetState.current_attempt_number }}</strong>
-      </p>
-    </div>
-
-    <div v-if="currentLift" class="current-lift-info">
-      <h2>CURRENT LIFT</h2>
-      <p class="lifter-name">{{ currentLift.lifter_name }}</p>
-      <p class="weight-class">({{ currentLift.weight_class_name }})</p>
-      <p class="lift-type">{{ currentLift.lift_type.toUpperCase() }}</p>
-      <p class="lift-details">
-        {{ currentLift.weight_lifted }} kg - Attempt
-        {{ currentLift.attempt_number }}
-      </p>
-
-      <div class="judge-scores">
-        <div class="judge-score-item">
-          <span>Judge 1:</span>
-          <span :class="getScoreClass(currentLift.judge1_score)">{{ formatScore(currentLift.judge1_score) }}</span>
-        </div>
-        <div class="judge-score-item">
-          <span>Judge 2:</span>
-          <span :class="getScoreClass(currentLift.judge2_score)">{{ formatScore(currentLift.judge2_score) }}</span>
-        </div>
-        <div class="judge-score-item">
-          <span>Judge 3:</span>
-          <span :class="getScoreClass(currentLift.judge3_score)">{{ formatScore(currentLift.judge3_score) }}</span>
-        </div>
-      </div>
-
-      <div v-if="currentLift.overall_result !== null" class="overall-result">
-        <h2>OVERALL RESULT</h2>
-        <p :class="currentLift.overall_result ? 'result-good' : 'result-bad'">
-          {{ currentLift.overall_result ? "GOOD LIFT" : "NO LIFT" }}
+    <!-- Current Meet State -->
+    <div class="mb-8 p-6 bg-gray-800 rounded-lg shadow-xl">
+      <h2 class="text-3xl font-bold text-indigo-300 mb-4 flex items-center">
+        <svg
+          class="mr-3 h-8 w-8 text-indigo-400"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M9 19V6l-5 4V21M9 19c-3.111 0-7-1.488-7-4s1.956-2 7-2m0 0v-5c0 1.25.968 2.5 3 2.5s3-1.25 3-2.5V4m0 0c0 1.25.968 2.5 3 2.5s3-1.25 3-2.5V4m-3 10v-4m-3 4v-4"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+        Meet Progress
+      </h2>
+      <div v-if="meetState" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xl">
+        <p>
+          <strong class="text-indigo-200">Current Lift:</strong>
+          <span class="capitalize text-indigo-400 font-extrabold">{{
+            meetState.current_lift_type
+          }}</span>
+        </p>
+        <p>
+          <strong class="text-indigo-200">Attempt:</strong>
+          <span class="text-indigo-400 font-extrabold">{{
+            meetState.current_attempt_number
+          }}</span>
+        </p>
+        <p>
+          <strong class="text-indigo-200">Active Lift ID:</strong>
+          <span :class="{
+            'text-green-400 font-semibold': meetState.current_active_lift_id,
+            'text-gray-500 italic': !meetState.current_active_lift_id,
+          }">
+            {{ meetState.current_active_lift_id || "None" }}
+          </span>
         </p>
       </div>
-      <div v-else class="overall-result">
-        <h2>OVERALL RESULT</h2>
-        <p class="result-pending">PENDING</p>
-      </div>
+      <div v-else class="text-gray-500 text-xl">Loading meet state...</div>
+    </div>
 
-      <div class="lifter-best-lifts">
-        <h3>{{ currentLift.lifter_name }}'s Best Lifts:</h3>
-        <div class="best-lifts-grid">
-          <div class="best-lift-item">
-            <span>Squat:</span>
-            <span class="best-lift-value">{{ bestLifts.squat || "N/A" }} kg</span>
+    <!-- Current Active Lift Display -->
+    <div class="mb-8 p-6 bg-gray-800 rounded-lg shadow-xl">
+      <h2 class="text-3xl font-bold text-indigo-300 mb-4 flex items-center">
+        <svg
+          class="mr-3 h-8 w-8 text-indigo-400"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+        On The Platform
+      </h2>
+      <div
+        v-if="currentLift"
+        class="bg-indigo-700 p-6 rounded-md border-2 border-indigo-500 text-center">
+        <p class="text-4xl font-extrabold mb-2 text-white">
+          {{ currentLift.lifter_name }}
+        </p>
+        <p class="text-2xl text-indigo-200 mb-3">
+          ID: {{ currentLift.lifter_id_number }} |
+          {{ currentLift.lift_type.toUpperCase() }} | Attempt
+          {{ currentLift.attempt_number }}
+        </p>
+        <p class="text-6xl font-black text-yellow-300 mb-4">
+          {{ currentLift.weight_lifted }} kg
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xl">
+          <div class="p-3 bg-indigo-600 rounded-md">
+            Judge 1:
+            <span :class="scoreClass(currentLift.judge1_score)">{{
+              formatScore(currentLift.judge1_score)
+            }}</span>
           </div>
-          <div class="best-lift-item">
-            <span>Bench:</span>
-            <span class="best-lift-value">{{ bestLifts.bench || "N/A" }} kg</span>
+          <div class="p-3 bg-indigo-600 rounded-md">
+            Judge 2:
+            <span :class="scoreClass(currentLift.judge2_score)">{{
+              formatScore(currentLift.judge2_score)
+            }}</span>
           </div>
-          <div class="best-lift-item">
-            <span>Deadlift:</span>
-            <span class="best-lift-value">{{ bestLifts.deadlift || "N/A" }} kg</span>
+          <div class="p-3 bg-indigo-600 rounded-md">
+            Judge 3:
+            <span :class="scoreClass(currentLift.judge3_score)">{{
+              formatScore(currentLift.judge3_score)
+            }}</span>
           </div>
         </div>
+
+        <p v-if="currentLift.overall_result !== null" class="text-5xl font-extrabold mt-6">
+          Overall:
+          <span :class="overallResultClass(currentLift.overall_result)">{{
+            formatOverallResult(currentLift.overall_result)
+          }}</span>
+        </p>
+        <p v-else class="text-4xl font-extrabold mt-6 text-orange-300 animate-pulse">
+          PENDING JUDGES...
+        </p>
+      </div>
+      <div v-else class="text-gray-500 italic text-2xl text-center">
+        No lifter currently active. Waiting for the Organizer...
       </div>
     </div>
-    <div v-else class="no-current-lift">
-      <h2>No Active Lift Currently</h2>
-      <p>Please wait for the organizer to set the next lift.</p>
+
+    <!-- Next Lifts in Queue -->
+    <div class="p-6 bg-gray-800 rounded-lg shadow-xl">
+      <h2 class="text-3xl font-bold text-indigo-300 mb-4 flex items-center">
+        <svg
+          class="mr-3 h-8 w-8 text-indigo-400"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+        Upcoming Lifts ({{ meetState?.current_lift_type }} - Attempt
+        {{ meetState?.current_attempt_number }})
+      </h2>
+      <div v-if="nextLiftsInQueue.length > 0">
+        <div class="overflow-x-auto">
+          <table class="min-w-full bg-gray-700 text-white rounded-lg overflow-hidden text-lg">
+            <thead class="bg-gray-600">
+              <tr
+                class="text-left text-sm font-semibold uppercase tracking-wider text-gray-300">
+                <th class="px-6 py-3">Lifter Name</th>
+                <th class="px-6 py-3">Lifter ID</th>
+                <th class="px-6 py-3">Weight</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="lift in nextLiftsInQueue"
+                :key="lift.id"
+                class="border-t border-gray-600 hover:bg-gray-600">
+                <td class="px-6 py-4">{{ lift.lifter_name }}</td>
+                <td class="px-6 py-4">{{ lift.lifter_id_number }}</td>
+                <td class="px-6 py-4">{{ lift.weight_lifted }} kg</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div v-else class="italic text-gray-500 text-2xl text-center">
+        No pending lifts for the current type and attempt.
+      </div>
     </div>
   </div>
 </template>
 
-<script>
-import { ref, onMounted, onUnmounted, watch } from "vue";
+<script setup>
+import { ref, onMounted, watch } from "vue";
 import { io } from "socket.io-client";
 
-export default {
-  name: "PublicDisplayView",
-  setup() {
-    const currentLift = ref(null);
-    const bestLifts = ref({ squat: null, bench: null, deadlift: null });
-    const currentMeetState = ref({
-      current_lift_type: "squat",
-      current_attempt_number: 1
-    });
-    let socket = null; // Declare socket here for onUnmounted access
+// Reactive state variables
+const meetState = ref(null);
+const currentLift = ref(null);
+const nextLiftsInQueue = ref([]);
 
-    const fetchCurrentLift = async () => {
-      try {
-        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/current_lift");
-        if (response.ok) {
-          const data = await response.json();
-          currentLift.value = data;
-          if (currentLift.value) {
-            fetchLifterAttempts(currentLift.value.lifter_id);
-          }
-        } else if (response.status === 404) {
-          currentLift.value = null; // No active lift found
-          bestLifts.value = { squat: null, bench: null, deadlift: null }; // Clear best lifts
-        }
-      } catch (error) {
-        console.error("Error fetching current lift:", error);
-      }
-    };
+// Determine API URL based on environment
+const BACKEND_API_URL =
+  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
+const SOCKET_IO_URL =
+  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
 
-    const fetchLifterAttempts = async (lifterId) => {
-      try {
-        const response = await fetch(`process.env.VUE_APP_BACKEND_API_URL/lifters/${lifterId}/attempts`);
-        if (response.ok) {
-          const attempts = await response.json();
-          const newBestLifts = { squat: null, bench: null, deadlift: null };
+// Initialize Socket.IO connection
+const socket = io(SOCKET_IO_URL);
 
-          attempts.forEach((attempt) => {
-            if (attempt.overall_result === true) {
-              // Only count successful lifts
-              if (attempt.lift_type === "squat") {
-                newBestLifts.squat = Math.max(newBestLifts.squat || 0, attempt.weight_lifted);
-              } else if (attempt.lift_type === "bench") {
-                newBestLifts.bench = Math.max(newBestLifts.bench || 0, attempt.weight_lifted);
-              } else if (attempt.lift_type === "deadlift") {
-                newBestLifts.deadlift = Math.max(newBestLifts.deadlift || 0, attempt.weight_lifted);
-              }
-            }
-          });
-          bestLifts.value = newBestLifts;
-        } else {
-          console.error("Failed to fetch lifter attempts:", response.statusText);
-          bestLifts.value = { squat: null, bench: null, deadlift: null };
-        }
-      } catch (error) {
-        console.error("Error fetching lifter attempts:", error);
-        bestLifts.value = { squat: null, bench: null, deadlift: null };
-      }
-    };
+// --- Utility Functions for Display ---
+const formatScore = (score) => {
+  if (score === true) return "GOOD";
+  if (score === false) return "BAD";
+  return "N/A";
+};
 
-    const fetchMeetState = async () => {
-      try {
-        const response = await fetch("process.env.VUE_APP_BACKEND_API_URL/meet_state");
-        if (response.ok) {
-          const data = await response.json();
-          currentMeetState.value = data;
-        }
-      } catch (error) {
-        console.error("Error fetching meet state:", error);
-      }
-    };
+const scoreClass = (score) => {
+  if (score === true) return "text-green-400 font-semibold";
+  if (score === false) return "text-red-400 font-semibold";
+  return "text-gray-400 italic";
+};
 
-    const formatScore = (score) => {
-      if (score === true) return "GOOD";
-      if (score === false) return "BAD";
-      return "PENDING";
-    };
+const formatOverallResult = (result) => {
+  if (result === true) return "GOOD LIFT";
+  if (result === false) return "NO LIFT";
+  return "PENDING"; // Should not show 'PENDING' if overall_result is not null
+};
 
-    const getScoreClass = (score) => {
-      if (score === true) return "score-good";
-      if (score === false) return "score-bad";
-      return "score-pending";
-    };
+const overallResultClass = (result) => {
+  if (result === true) return "text-green-500";
+  if (result === false) return "text-red-500";
+  return "text-orange-500"; // Should not be reached if overall_result is not null
+};
 
-    // Watch for changes in currentLift.value.lifter_id to refetch best lifts
-    watch(
-      () => currentLift.value?.lifter_id,
-      (newLifterId, oldLifterId) => {
-        if (newLifterId && newLifterId !== oldLifterId) {
-          fetchLifterAttempts(newLifterId);
-        } else if (!newLifterId) {
-          bestLifts.value = { squat: null, bench: null, deadlift: null }; // Clear if no lifter
-        }
-      }
-    );
-
-    onMounted(() => {
-      fetchCurrentLift(); // Initial fetch
-      fetchMeetState(); // Fetch initial meet state
-
-      // Connect to Socket.IO
-      socket = io("process.env.VUE_APP_BACKEND_API_URL");
-
-      // Listen for active lift changes
-      socket.on("active_lift_changed", (lift) => {
-        console.log("Active lift changed via WS:", lift);
-        currentLift.value = lift;
-        // fetchLifterAttempts will be triggered by the watch effect
-      });
-
-      // Listen for lift updates (e.g., judge scores coming in)
-      socket.on("lift_updated", (lift) => {
-        console.log("Lift updated via WS:", lift);
-        if (currentLift.value && currentLift.value.id === lift.id) {
-          currentLift.value = lift; // Update current lift details if it's the same lift
-          // If the updated lift is the current one and it's completed, refresh best lifts
-          if (lift.status === "completed" && lift.overall_result === true) {
-            fetchLifterAttempts(lift.lifter_id);
-          }
-        }
-      });
-
-      // Listen for meet state updates (e.g., lift type or attempt number changed by organizer)
-      socket.on("meet_state_updated", (state) => {
-        console.log("Meet state updated via WS:", state);
-        currentMeetState.value = state;
-      });
-    });
-
-    onUnmounted(() => {
-      // Clean up socket listeners when component is unmounted
-      if (socket) {
-        socket.off("active_lift_changed");
-        socket.off("lift_updated");
-        socket.off("meet_state_updated");
-        socket.disconnect();
-      }
-    });
-
-    return {
-      currentLift,
-      bestLifts,
-      currentMeetState,
-      formatScore,
-      getScoreClass
-    };
+// --- Fetching Functions ---
+const fetchMeetState = async () => {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/meet_state`);
+    const data = await await response.json();
+    meetState.value = data;
+  } catch (error) {
+    console.error("Error fetching meet state:", error);
   }
 };
+
+const fetchCurrentLift = async () => {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/current_lift`);
+    if (response.ok) {
+      const data = await response.json();
+      currentLift.value = Object.keys(data).length > 0 ? data : null; // Handle empty object for no active lift
+    } else {
+      currentLift.value = null;
+      console.error("Failed to fetch current lift:", response.statusText);
+    }
+  } catch (error) {
+    console.error("Network error fetching current lift:", error);
+  }
+};
+
+const fetchNextLiftsInQueue = async () => {
+  try {
+    await fetch(`${BACKEND_API_URL}/next_lift_in_queue`); // Trigger backend queue logic if needed
+    const allLiftsResponse = await fetch(`${BACKEND_API_URL}/lifts`);
+    if (allLiftsResponse.ok) {
+      const allLifts = await allLiftsResponse.json();
+      nextLiftsInQueue.value = allLifts
+        .filter(
+          (lift) =>
+            lift.status === "pending" &&
+            lift.lift_type === meetState.value?.current_lift_type &&
+            lift.attempt_number === meetState.value?.current_attempt_number
+        )
+        .sort((a, b) => {
+          // Sort by weight_lifted (ascending), then by lifter_id_number (ascending)
+          if (a.weight_lifted !== b.weight_lifted) {
+            return a.weight_lifted - b.weight_lifted;
+          }
+          return a.lifter_id_number.localeCompare(b.lifter_id_number);
+        });
+    } else {
+      nextLiftsInQueue.value = [];
+    }
+  } catch (error) {
+    console.error("Error fetching next lifts in queue:", error);
+  }
+};
+
+// --- Socket.IO Event Listeners ---
+onMounted(() => {
+  fetchMeetState();
+  fetchCurrentLift();
+  fetchNextLiftsInQueue();
+
+  socket.on("connect", () => {
+    // console.log("Connected to Socket.IO from PublicDisplayView");
+  });
+
+  socket.on("meet_state_updated", (_data) => {
+    // console.log("Meet state updated via Socket.IO:", _data);
+    meetState.value = _data;
+    fetchCurrentLift();
+    fetchNextLiftsInQueue();
+  });
+
+  socket.on("active_lift_changed", (_data) => {
+    // console.log("Active lift changed via Socket.IO:", _data);
+    currentLift.value = _data;
+    fetchNextLiftsInQueue();
+  });
+
+  socket.on("lift_updated", (_data) => {
+    // console.log("Lift updated via Socket.IO:", _data);
+    if (currentLift.value && currentLift.value.id === _data.id) {
+      currentLift.value = _data;
+    }
+    fetchNextLiftsInQueue();
+  });
+});
+
+// Watcher for meetState changes to ensure nextLiftsInQueue is always relevant
+watch(meetState, (newMeetState) => {
+  if (newMeetState) {
+    fetchNextLiftsInQueue();
+  }
+});
 </script>
 
 <style scoped>
-.public-display-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background-color: #2c3e50; /* Dark blue/grey */
-  color: #ecf0f1; /* Light text */
-  font-family: "Inter", sans-serif; /* Use Inter font */
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-/* Style for the logo/flag image */
-.meet-logo,
-.country-flag {
-  max-width: 150px; /* Adjust as needed */
-  height: auto;
-  margin-bottom: 20px; /* Space below the image */
-  border-radius: 8px; /* Slightly rounded corners for aesthetics */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow */
-}
-
-h1 {
-  font-size: 3.5em;
-  color: #f39c12; /* Orange/Gold */
-  margin-bottom: 30px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
-}
-
-.meet-state-info {
-  background-color: #34495e;
-  border-radius: 10px;
-  padding: 15px 25px;
-  margin-bottom: 30px;
-  display: flex;
-  gap: 30px;
-  font-size: 1.3em;
-  color: #bdc3c7;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.meet-state-info strong {
-  color: #1abc9c; /* Turquoise */
-}
-
-.current-lift-info {
-  background-color: #34495e; /* Slightly lighter dark blue */
-  border-radius: 15px;
-  padding: 40px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-  width: 100%;
-  max-width: 700px;
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.current-lift-info h2 {
-  font-size: 2.5em;
-  color: #e74c3c; /* Red */
-  margin-bottom: 20px;
-  text-transform: uppercase;
-}
-
-.lifter-name {
-  font-size: 4em;
-  font-weight: bold;
-  color: #ecf0f1;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-}
-
-.weight-class {
-  font-size: 1.8em;
-  color: #bdc3c7;
-  margin-bottom: 15px;
-}
-
-.lift-type {
-  font-size: 2.2em;
-  font-weight: bold;
-  color: #1abc9c; /* Turquoise */
-  margin-bottom: 15px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.lift-details {
-  font-size: 2.5em;
-  font-weight: bold;
-  color: #2ecc71; /* Green */
-  margin-bottom: 40px;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.judge-scores {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 40px;
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
-  gap: 20px;
-}
-
-.judge-score-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #bdc3c7;
-}
-
-.judge-score-item span:first-child {
-  margin-bottom: 5px;
-}
-
-.judge-score-item span:last-child {
-  padding: 10px 20px;
-  border-radius: 10px;
-  color: white;
-  min-width: 120px; /* Ensure consistent button size */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.score-good {
-  background-color: #28a745;
-} /* Bootstrap success green */
-.score-bad {
-  background-color: #dc3545;
-} /* Bootstrap danger red */
-.score-pending {
-  background-color: #ffc107;
-  color: #333;
-} /* Bootstrap warning yellow */
-
-.overall-result {
-  margin-top: 30px;
-}
-
-.overall-result h2 {
-  font-size: 2.2em;
-  color: #f39c12;
-  margin-bottom: 15px;
-  text-transform: uppercase;
-}
-
-.overall-result p {
-  font-size: 5em;
-  font-weight: bold;
-  text-transform: uppercase;
-  text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
-}
-
-.result-good {
-  color: #1abc9c;
-} /* Turquoise */
-.result-bad {
-  color: #e74c3c;
-} /* Alizarin red */
-.result-pending {
-  color: #bdc3c7;
-} /* Silver */
-
-.lifter-best-lifts {
-  background-color: #2c3e50; /* Darker background for this section */
-  border-radius: 10px;
-  padding: 25px;
-  margin-top: 40px;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
-.lifter-best-lifts h3 {
-  font-size: 1.8em;
-  color: #f39c12;
-  margin-bottom: 25px;
-}
-
-.best-lifts-grid {
-  display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.best-lift-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 1.4em;
-  color: #ecf0f1;
-}
-
-.best-lift-item span:first-child {
-  font-weight: bold;
-  margin-bottom: 8px;
-  color: #bdc3c7;
-}
-
-.best-lift-value {
-  font-size: 1.8em;
-  font-weight: bold;
-  color: #2ecc71; /* Green */
-  padding: 8px 15px;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-}
-
-.no-current-lift {
-  background-color: #34495e;
-  border-radius: 15px;
-  padding: 50px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-  width: 100%;
-  max-width: 700px;
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.no-current-lift h2 {
-  font-size: 2.5em;
-  color: #bdc3c7;
-  margin-bottom: 20px;
-}
-
-.no-current-lift p {
-  font-size: 1.5em;
-  color: #95a5a6;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .meet-logo,
-  .country-flag {
-    max-width: 100px; /* Smaller on mobile */
-  }
-
-  h1 {
-    font-size: 2.5em;
-    margin-bottom: 25px;
-  }
-  .meet-state-info {
-    flex-direction: column;
-    gap: 10px;
-    font-size: 1.1em;
-  }
-  .current-lift-info {
-    padding: 25px;
-  }
-  .current-lift-info h2 {
-    font-size: 2em;
-  }
-  .lifter-name {
-    font-size: 3em;
-  }
-  .weight-class {
-    font-size: 1.5em;
-  }
-  .lift-type {
-    font-size: 1.8em;
-  }
-  .lift-details {
-    font-size: 2em;
-  }
-  .judge-scores {
-    flex-direction: column;
-    gap: 15px;
-  }
-  .judge-score-item span:last-child {
-    min-width: unset;
-    width: 80%;
-  }
-  .overall-result p {
-    font-size: 4em;
-  }
-  .lifter-best-lifts {
-    padding: 15px;
-  }
-  .lifter-best-lifts h3 {
-    font-size: 1.5em;
-  }
-  .best-lifts-grid {
-    flex-direction: column;
-    gap: 15px;
-  }
-  .best-lift-item {
-    font-size: 1.2em;
-  }
-  .best-lift-value {
-    font-size: 1.5em;
-  }
-  .no-current-lift {
-    padding: 30px;
-  }
-  .no-current-lift h2 {
-    font-size: 2em;
-  }
-  .no-current-lift p {
-    font-size: 1.2em;
-  }
-}
+/* You can add custom styles here if Tailwind alone isn't sufficient */
+/* For example, specific font sizes not easily expressible with Tailwind classes */
 </style>
