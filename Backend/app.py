@@ -12,9 +12,13 @@ from datetime import datetime, date
 app = Flask(__name__)
 
 # Configure CORS to allow requests from your Netlify frontend
-# Make sure this matches your deployed Netlify URL
-# If you also develop locally, you can add "http://localhost:8080" to the list
-FRONTEND_ORIGINS = ["https://powerlifting-meet-systemeg.netlify.app"]
+# IMPORTANT: This must EXACTLY match the origin of your Netlify frontend.
+# It's a tuple for a single origin, or a list/tuple for multiple origins.
+FRONTEND_ORIGINS = ("https://powerlifting-meet-systemeg.netlify.app",)
+# If you are also running locally and need to connect from http://localhost:8080, use:
+# FRONTEND_ORIGINS = ("https://powerlifting-meet-systemeg.netlify.app", "http://localhost:8080")
+
+# Apply CORS to all Flask routes
 CORS(app, resources={r"/*": {"origins": FRONTEND_ORIGINS}})
 
 # Configure database
@@ -22,8 +26,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Initialize SocketIO
-# Ensure CORS is also configured for SocketIO
+# Initialize SocketIO with explicit CORS configuration
+# This is crucial for WebSocket connections
 socketio = SocketIO(app, cors_allowed_origins=FRONTEND_ORIGINS)
 
 # Example: Judge PINs (replace with secure storage in production)
@@ -630,6 +634,16 @@ def export_meet_data():
             print(f"Error during export: {e}")
             return jsonify({"error": "Failed to export data", "details": str(e)}), 500
 
+# Judge Login Route (newly added for JudgeView)
+@app.route('/login_judge', methods=['POST'])
+def login_judge():
+    data = request.get_json()
+    pin = data.get('pin')
+    if pin in JUDGE_PINS:
+        return jsonify({"message": "Login successful", "judge_id": JUDGE_PINS[pin]}), 200
+    else:
+        return jsonify({"error": "Invalid PIN"}), 401
+
 # Socket.IO Event Handlers
 @socketio.on('connect')
 def test_connect():
@@ -689,10 +703,6 @@ if __name__ == '__main__':
     create_tables()
     
     port = int(os.environ.get("PORT", 5000))
-    # Note: When deploying with Gunicorn on Render, you typically configure Gunicorn
-    # to run your app directly (e.g., `gunicorn app:app`). The socketio.run()
-    # below is primarily for local development or if Render's start command
-    # explicitly runs this file. Render's standard Gunicorn config might not
-    # use this part. However, having `create_tables()` called here ensures
-    # the database is initialized.
+    # It's crucial that Gunicorn, not Flask's dev server, runs the app in production.
+    # The socketio.run() is mainly for local development. On Render, Gunicorn uses eventlet.
     socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
