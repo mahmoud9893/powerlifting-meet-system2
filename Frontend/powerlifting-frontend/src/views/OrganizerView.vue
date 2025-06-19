@@ -580,10 +580,11 @@ const newAgeClass = ref({
 });
 
 // Determine API URL based on environment
-const BACKEND_API_URL =
-  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
-const SOCKET_IO_URL =
-  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
+// This will prioritize the VUE_APP_BACKEND_API_URL environment variable (set in Netlify)
+// If not set, it will fallback to your Render backend URL directly for robustness.
+const BACKEND_API_URL = process.env.VUE_APP_BACKEND_API_URL || "https://powerlifting-meet-backend.onrender.com";
+const SOCKET_IO_URL = process.env.VUE_APP_BACKEND_API_URL || "https://powerlifting-meet-backend.onrender.com";
+
 
 // Initialize Socket.IO connection
 const socket = io(SOCKET_IO_URL);

@@ -124,10 +124,9 @@ const showMessage = (msg, type = "info") => {
 };
 
 // IMPORTANT: Ensure this URL points to your LIVE RENDER BACKEND URL
-const BACKEND_API_URL =
-  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
-const SOCKET_IO_URL =
-  process.env.VUE_APP_BACKEND_API_URL || "http://localhost:5000";
+const BACKEND_API_URL = process.env.VUE_APP_BACKEND_API_URL || "https://powerlifting-meet-backend.onrender.com";
+const SOCKET_IO_URL = process.env.VUE_APP_BACKEND_API_URL || "https://powerlifting-meet-backend.onrender.com";
+
 
 const socket = io(SOCKET_IO_URL);
 
