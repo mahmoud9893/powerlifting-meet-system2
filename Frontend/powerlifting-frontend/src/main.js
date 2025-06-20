@@ -7,8 +7,8 @@ import { io } from "socket.io-client"; // Import Socket.IO client
 const app = createApp(App);
 
 // Connect to your Flask backend using the public URL
-// IMPORTANT: REPLACE 'http://YOUR_COMPUTERS_IP_ADDRESS:5000' with your LIVE RENDER BACKEND URL (e.g., 'https://your-backend-name.onrender.com')
-const socket = io("https://powerlifting-meet-backend.onrender.com");
+// IMPORTANT: This URL has been updated to your correct Render backend URL.
+const socket = io("https://powerlifting-meet-system24.onrender.com"); // <--- THIS LINE IS THE CRITICAL CHANGE
 
 // Make socket available globally in Vue components
 app.config.globalProperties.$socket = socket;
