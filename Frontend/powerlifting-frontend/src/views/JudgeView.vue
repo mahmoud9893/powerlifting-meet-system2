@@ -79,7 +79,8 @@
             Overall:
             <span
               :class="currentLift.overall_result ? 'text-green-700' : 'text-red-700'"
-              >{{ currentLift.overall_result ? "GOOD" : "NO LIFT" }}</span>
+              >{{ currentLift.overall_result ? "GOOD" : "NO LIFT" }}</span
+            >
           </p>
           <p v-else class="overall-result text-2xl font-bold mt-4 text-left text-orange-500">
             Overall: PENDING
@@ -122,9 +123,9 @@ const showMessage = (msg, type = "info") => {
   }, 5000); // Message disappears after 5 seconds
 };
 
-// IMPORTANT: Ensure this URL points to your LIVE RENDER BACKEND URL
-const BACKEND_API_URL = process.env.VUE_APP_BACKEND_API_URL || "https://powerlifting-meet-backend.onrender.com";
-const SOCKET_IO_URL = process.env.VUE_APP_BACKEND_API_URL || "https://powerlifting-meet-backend.onrender.com";
+// IMPORTANT: Directly specify the correct Render backend URL
+const BACKEND_API_URL = "https://powerlifting-meet-system24.onrender.com";
+const SOCKET_IO_URL = "https://powerlifting-meet-system24.onrender.com";
 
 
 const socket = io(SOCKET_IO_URL);
