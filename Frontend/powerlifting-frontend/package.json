@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build --skip-plugins @vue/cli-plugin-eslint", // <--- CHANGE THIS LINE
+    "build": "vue-cli-service build --skip-plugins @vue/cli-plugin-eslint",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
@@ -28,4 +28,3 @@
     "tailwindcss": "^3.4.4"
   }
 }
-
