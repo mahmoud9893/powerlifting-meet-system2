@@ -1,9 +1,9 @@
     # Backend/app.py
 
-    # IMPORTANT: eventlet.monkey_patch() MUST be called BEFORE any other imports
-    # that might use standard library modules (like socket, threading).
-    import eventlet
-    eventlet.monkey_patch()
+# IMPORTANT: eventlet.monkey_patch() MUST be called BEFORE any other imports
+# that might use standard library modules (like socket, threading).
+import eventlet
+eventlet.monkey_patch()
 
     from flask import Flask, request, jsonify
     from flask_socketio import SocketIO, emit
