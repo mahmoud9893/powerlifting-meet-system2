@@ -1,4 +1,9 @@
-# Backend/app.pyn
+# Backend/app.py
+
+# IMPORTANT: eventlet.monkey_patch() MUST be called BEFORE any other imports
+# that might use standard library modules (like socket, threading).
+import eventlet
+eventlet.monkey_patch()
 
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
@@ -25,6 +30,11 @@ db = SQLAlchemy(app)
 # !!! IMPORTANT: This is for debugging purposes ONLY. For production,
 # !!! you should restrict this to your actual frontend URL(s).
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Explicitly register a teardown function for the database session
+@app.teardown_appcontext
+def remove_session(exception=None):
+    db.session.remove()
 
 # Example: Judge PINs (replace with secure storage in production)
 JUDGE_PINS = {
@@ -635,7 +645,7 @@ def create_tables():
                 WeightClass(name="Women's 57kg", min_weight=52.01, max_weight=57, gender="Female"),
                 WeightClass(name="Women's 63kg", min_weight=57.01, max_weight=63, gender="Female"),
                 WeightClass(name="Women's 69kg", min_weight=63.01, max_weight=69, gender="Female"),
-                WeightClass(name="Women's 76kg", min_weight=69.01, max_weight=76, gender="Female"), # Corrected max_weight
+                WeightClass(name="Women's 76kg", min_weight=69.01, max_weight=76, gender="Female"),
                 WeightClass(name="Women's 84kg", min_weight=76.01, max_weight=84, gender="Female"),
                 WeightClass(name="Women's 84+kg", min_weight=84.01, max_weight=None, gender="Female")
             ])
