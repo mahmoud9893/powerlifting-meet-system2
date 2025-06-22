@@ -5,13 +5,13 @@
 import eventlet
 eventlet.monkey_patch()
 
-    from flask import Flask, request, jsonify
-    from flask_socketio import SocketIO, emit
-    from flask_sqlalchemy import SQLAlchemy
-    from flask_cors import CORS
-    import os
-    import random
-    from datetime import datetime, date
+from flask import Flask, request, jsonify
+from flask_socketio import SocketIO, emit
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+import os
+import random
+from datetime import datetime, date
 
     # Initialize Flask app
     app = Flask(__name__)
