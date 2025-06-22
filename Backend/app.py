@@ -626,7 +626,11 @@ def test_disconnect():
 # Initial database setup function - This MUST retain app_context as it runs outside a request
 def create_tables():
     with app.app_context():
+        # Drop all tables first to ensure a clean schema recreation
+        db.drop_all()
         db.create_all()
+        
+        # Populate initial data only if tables were just created (or dropped and recreated)
         if not MeetState.query.first():
             db.session.add(MeetState(current_lift_type='squat', current_attempt_number=1))
             db.session.commit()
