@@ -24,6 +24,12 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Configure database
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Add connection pooling options for resilience
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,  # Test connections before use
+    "pool_recycle": 3600,   # Recycle connections after 1 hour (common for cloud DBs)
+    "pool_timeout": 30,     # Max wait for a connection from the pool (seconds)
+}
 db = SQLAlchemy(app)
 
 # Initialize SocketIO with explicit CORS configuration for ANY origin.
@@ -627,11 +633,7 @@ def test_disconnect():
 # Initial database setup function - This MUST retain app_context as it runs outside a request
 def create_tables():
     with app.app_context():
-        # Drop all tables first to ensure a clean schema recreation
-        # This is crucial AFTER a manual DROP SCHEMA public CASCADE,
-        # so Flask-SQLAlchemy doesn't encounter existing dependent objects.
-        # Keep this line commented out here.
-        # db.drop_all()
+        # db.drop_all() # Keep this commented out after manual DROP SCHEMA public CASCADE
         db.create_all()
         
         # Populate initial data only if tables were just created (or dropped and recreated)
