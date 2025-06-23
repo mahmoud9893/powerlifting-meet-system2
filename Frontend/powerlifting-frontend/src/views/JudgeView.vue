@@ -1,204 +1,153 @@
 <template>
-  <div class="judge-app-container p-6 bg-gray-100 min-h-screen text-gray-800">
-    <h1 class="text-3xl font-bold text-indigo-700 mb-6 border-b-2 pb-2">
-      Judge Scorecard
+  <div class="judges-view p-6 bg-gray-900 min-h-screen text-white flex flex-col items-center justify-center">
+    <h1 class="text-4xl font-extrabold text-teal-400 mb-8 border-b-4 border-teal-500 pb-2 text-center">
+      Judge Panel
     </h1>
 
-    <div v-if="message" :class="['message-box p-3 rounded-md mb-4 text-center text-base', messageType === 'success' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800']">
-      {{ message }}
-    </div>
-
-    <!-- PIN Entry / Login Screen -->
-    <div v-if="!isLoggedIn" class="login-card p-6 bg-white rounded-lg shadow-md max-w-md mx-auto">
-      <h2 class="text-2xl font-semibold mb-4 text-center">Enter Judge PIN</h2>
+    <div v-if="!judgeName" class="login-section bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+      <h2 class="text-2xl font-bold text-teal-300 mb-4">Judge Login</h2>
       <input
         type="password"
-        v-model="pinCode"
-        placeholder="Enter 4-digit PIN"
-        maxlength="4"
-        @keyup.enter="handleLogin"
-        class="pin-input w-full p-3 mb-4 border border-gray-300 rounded-md text-center text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        v-model="pin"
+        placeholder="Enter PIN"
+        class="w-full p-3 mb-4 rounded-md bg-gray-700 text-white border border-gray-600 focus:ring-teal-500 focus:border-teal-500"
       />
-      <button @click="handleLogin" class="login-btn w-full bg-indigo-600 text-white py-3 rounded-md hover:bg-indigo-700 transition duration-300 text-lg font-semibold shadow-md">
+      <button
+        @click="login"
+        class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 ease-in-out">
         Login
       </button>
-      <p v-if="loginError" class="error-message text-red-600 text-sm mt-3 text-center">{{ loginError }}</p>
-      <p class="info-text text-gray-500 text-sm mt-4 text-center">
-        Please contact the organizer for your PIN.
-      </p>
+      <p v-if="loginError" class="text-red-500 mt-3 text-center">{{ loginError }}</p>
     </div>
 
-    <!-- Main Judge Scorecard (Visible only after successful login) -->
-    <div v-else class="scorecard-container max-w-2xl mx-auto">
-      <div v-if="currentLift" class="current-lift-card p-6 bg-white rounded-lg shadow-md text-center">
-        <h2 class="text-2xl font-bold text-indigo-700 mb-3">Current Lifter:</h2>
-        <p class="lifter-name text-3xl font-extrabold text-gray-900 mb-2">{{ currentLift.lifter_name }}</p>
-        <p class="details text-lg text-gray-600 mb-1">
-          ID: {{ currentLift.lifter_id_number }} | Gender:
-          {{ currentLift.gender }}
+    <div v-else class="judge-dashboard bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl">
+      <h2 class="text-3xl font-bold text-teal-300 mb-6 text-center">Welcome, {{ judgeName }}!</h2>
+      
+      <!-- Current Active Lift Display for Judges -->
+      <div v-if="currentLift" class="bg-teal-700 p-6 rounded-md border-2 border-teal-500 text-center mb-6">
+        <p class="text-4xl font-extrabold mb-2 text-white">
+          {{ currentLift.lifter_name }}
         </p>
-        <p class="details text-lg text-gray-600 mb-4">
-          Weight Class: {{ currentLift.weight_class_name || 'N/A' }} | Attempt:
+        <p class="text-2xl text-teal-200 mb-3">
+          ID: {{ currentLift.lifter_id_number }} |
+          {{ currentLift.lift_type ? currentLift.lift_type.toUpperCase() : '' }} | Attempt
           {{ currentLift.attempt_number }}
         </p>
-        <p class="lift-type text-4xl font-bold text-indigo-600 mb-4">{{ currentLift.lift_type.toUpperCase() }}</p>
-        <p class="weight-lifted text-5xl font-extrabold text-yellow-600 mb-6">
+        <p class="text-6xl font-black text-yellow-300 mb-4">
           {{ currentLift.weight_lifted }} kg
         </p>
 
-        <div class="judge-buttons grid grid-cols-2 gap-4 mb-6">
-          <button @click="submitScore(true)" class="good-lift-btn bg-green-500 text-white py-4 rounded-lg text-2xl font-bold hover:bg-green-600 transition duration-300 flex items-center justify-center">
-            <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Good Lift
+        <p class="text-xl text-teal-100 mb-4">Your Score:</p>
+        <div class="flex justify-center space-x-4 mb-4">
+          <button
+            @click="submitScore(true)"
+            :disabled="hasScored"
+            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+            GOOD LIFT
           </button>
-          <button @click="submitScore(false)" class="bad-lift-btn bg-red-500 text-white py-4 rounded-lg text-2xl font-bold hover:bg-red-600 transition duration-300 flex items-center justify-center">
-            <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> No Lift
+          <button
+            @click="submitScore(false)"
+            :disabled="hasScored"
+            class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+            NO LIFT
           </button>
         </div>
-
-        <div class="current-scores p-4 bg-gray-50 rounded-md">
-          <h3 class="text-xl font-semibold mb-3 text-left">Current Scores:</h3>
-          <p class="text-lg text-left">
-            Judge 1:
-            <span :class="getScoreClass(currentLift.judge1_score)">{{
-              formatScore(currentLift.judge1_score)
-            }}</span>
-          </p>
-          <p class="text-lg text-left">
-            Judge 2:
-            <span :class="getScoreClass(currentLift.judge2_score)">{{
-              formatScore(currentLift.judge2_score)
-            }}</span>
-          </p>
-          <p class="text-lg text-left">
-            Judge 3:
-            <span :class="getScoreClass(currentLift.judge3_score)">{{
-              formatScore(currentLift.judge3_score)
-            }}</span>
-          </p>
-          <p v-if="currentLift.overall_result !== null" class="overall-result text-2xl font-bold mt-4 text-left">
-            Overall:
-            <span
-              :class="currentLift.overall_result ? 'text-green-700' : 'text-red-700'"
-              >{{ currentLift.overall_result ? "GOOD" : "NO LIFT" }}</span
-            >
-          </p>
-          <p v-else class="overall-result text-2xl font-bold mt-4 text-left text-orange-500">
-            Overall: PENDING
-          </p>
-        </div>
+        <p v-if="hasScored" class="text-green-300 text-xl">Score Submitted!</p>
+        <p v-else-if="scoreError" class="text-red-400 text-xl">{{ scoreError }}</p>
       </div>
-      <div v-else class="no-active-lift p-6 bg-white rounded-lg shadow-md text-center text-xl italic text-gray-600">
-        <p>No active lift currently. Waiting for organizer...</p>
+      <div v-else class="text-gray-500 italic text-2xl text-center">
+        No lifter currently active. Waiting for Organizer to set active lift.
       </div>
 
-      <!-- Judge ID display (now auto-assigned/shown after login) -->
-      <div class="judge-id-section mt-8 p-4 bg-white rounded-lg shadow-md text-center">
-        <p class="text-lg">
-          You are logged in as Judge: <strong class="text-indigo-700">{{ judgeId }}</strong>
-        </p>
-        <button @click="logout" class="logout-btn mt-3 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition duration-300 text-base font-semibold shadow-md">Logout</button>
-      </div>
+      <button
+        @click="logout"
+        class="mt-8 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out">
+        Logout
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted } from "vue";
 import { io } from "socket.io-client";
 
-const pinCode = ref("");
-const isLoggedIn = ref(false);
-const loginError = ref("");
-const judgeId = ref(null); // Stores "Judge 1", "Judge 2", etc.
+const pin = ref("");
+const judgeName = ref(localStorage.getItem("judgeName") || null);
+const loginError = ref(null);
 const currentLift = ref(null);
-const message = ref("");
-const messageType = ref(""); // 'success' or 'error'
+const scoreError = ref(null);
+const hasScored = ref(false);
 
-const showMessage = (msg, type = "info") => {
-  message.value = msg;
-  messageType.value = type;
-  setTimeout(() => {
-    message.value = "";
-    messageType.value = "";
-  }, 5000); // Message disappears after 5 seconds
-};
-
-// IMPORTANT: Directly specify the correct Render backend URL
 const BACKEND_API_URL = "https://powerlifting-meet-system24.onrender.com";
 const SOCKET_IO_URL = "https://powerlifting-meet-system24.onrender.com";
 
-
 const socket = io(SOCKET_IO_URL);
 
-// --- Utility Functions for Display ---
-const formatScore = (score) => {
-  if (score === true) return "GOOD";
-  if (score === false) return "BAD";
-  return "N/A";
-};
-
-const getScoreClass = (score) => {
-  if (score === true) return "text-green-600 font-semibold";
-  if (score === false) return "text-red-600 font-semibold";
-  return "text-gray-500 italic";
-};
-
-// --- Fetching and Action Functions ---
-const fetchCurrentLift = async () => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/current_lift`);
-    if (response.ok) {
-      const data = await response.json();
-      currentLift.value = Object.keys(data).length > 0 ? data : null; // Handle empty object for no active lift
-    } else {
-      currentLift.value = null;
-      console.error("Failed to fetch current lift:", response.statusText);
-    }
-  } catch (error) {
-    console.error("Network error fetching current lift:", error);
-  }
-};
-
-const handleLogin = async () => {
-  loginError.value = "";
+// --- Login/Logout Logic ---
+const login = async () => {
+  loginError.value = null;
   try {
     const response = await fetch(`${BACKEND_API_URL}/login_judge`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin: pinCode.value }),
+      body: JSON.stringify({ pin: pin.value }),
     });
     const data = await response.json();
     if (response.ok) {
-      isLoggedIn.value = true;
-      judgeId.value = data.judge_id;
-      localStorage.setItem("judgePin", pinCode.value); // Store PIN for persistence
-      localStorage.setItem("judgeId", judgeId.value);
-      showMessage("Logged in successfully!", "success");
-      fetchCurrentLift(); // Fetch active lift once logged in
+      judgeName.value = data.judge_id;
+      localStorage.setItem("judgeName", data.judge_id); // Persist login
+      pin.value = ""; // Clear pin
+      fetchCurrentLift(); // Fetch current lift immediately after login
     } else {
       loginError.value = data.error || "Login failed.";
-      showMessage(loginError.value, "error");
     }
   } catch (error) {
     loginError.value = "Network error during login.";
-    showMessage(loginError.value, "error");
     console.error("Login network error:", error);
   }
 };
 
 const logout = () => {
-  isLoggedIn.value = false;
-  pinCode.value = "";
-  judgeId.value = null;
-  currentLift.value = null; // Clear current lift on logout
-  localStorage.removeItem("judgePin"); // Clear stored PIN
-  localStorage.removeItem("judgeId"); // Clear stored Judge ID
-  showMessage("Logged out successfully.", "success");
+  judgeName.value = null;
+  localStorage.removeItem("judgeName");
+  currentLift.value = null;
+  hasScored.value = false;
+  scoreError.value = null;
+};
+
+// --- Fetching and Scoring Lift Logic ---
+const fetchCurrentLift = async () => {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/current_lift`);
+    if (response.ok) {
+      const data = await response.json();
+      currentLift.value = Object.keys(data).length > 0 ? data : null;
+      hasScored.value = checkIfJudgeHasScored(currentLift.value); // Reset score status
+    } else {
+      currentLift.value = null;
+      console.error("Failed to fetch current lift:", response.statusText);
+    }
+  }
+  catch (error) {
+    console.error("Network error fetching current lift:", error);
+  }
+};
+
+const checkIfJudgeHasScored = (lift) => {
+  if (!lift || !judgeName.value) return false;
+  if (judgeName.value === "Judge 1" && lift.judge1_score !== null) return true;
+  if (judgeName.value === "Judge 2" && lift.judge2_score !== null) return true;
+  if (judgeName.value === "Judge 3" && lift.judge3_score !== null) return true;
+  return false;
 };
 
 const submitScore = async (score) => {
-  if (!currentLift.value || !judgeId.value) {
-    showMessage("No active lift or not logged in.", "error");
+  scoreError.value = null;
+  hasScored.value = false; // Optimistically reset
+
+  if (!currentLift.value || !judgeName.value) {
+    scoreError.value = "No active lift or not logged in.";
     return;
   }
 
@@ -206,158 +155,50 @@ const submitScore = async (score) => {
     const response = await fetch(`${BACKEND_API_URL}/lifts/${currentLift.value.id}/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ judge_pin: pinCode.value, score: score }),
+      body: JSON.stringify({ judge_pin: pin.value, score: score }), // Send actual pin for validation
     });
     const data = await response.json();
     if (response.ok) {
-      showMessage("Score submitted successfully!", "success");
-      // The socket.io 'lift_updated' event will handle updating currentLift.value
+      // Update local currentLift with the latest data from backend
+      currentLift.value = data;
+      hasScored.value = checkIfJudgeHasScored(currentLift.value); // Re-check after update
     } else {
-      showMessage(`Failed to submit score: ${data.error || response.statusText}`, "error");
+      scoreError.value = data.error || "Failed to submit score.";
     }
   } catch (error) {
-    showMessage("Network error during score submission.", "error");
-    console.error("Score submission network error:", error);
+    scoreError.value = "Network error submitting score.";
+    console.error("Submit score network error:", error);
   }
 };
 
 // --- Socket.IO Event Listeners ---
 onMounted(() => {
-  // Attempt auto-login if PIN is stored
-  const storedPin = localStorage.getItem("judgePin");
-  const storedJudgeId = localStorage.getItem("judgeId");
-  if (storedPin && storedJudgeId) {
-    pinCode.value = storedPin;
-    // We don't re-run handleLogin on mount to avoid unnecessary backend calls
-    // Just set the state to logged in, and then fetch the current lift.
-    isLoggedIn.value = true;
-    judgeId.value = storedJudgeId;
+  // Only fetch current lift on mount if already logged in (e.g., from localStorage)
+  if (judgeName.value) {
     fetchCurrentLift();
   }
 
   socket.on("connect", () => {
-    // console.log("Judge App Connected to Socket.IO");
+    // console.log("Connected to Socket.IO from JudgesView");
   });
 
-  socket.on("active_lift_changed", (data) => {
-    // console.log("Judge App: Active lift changed via Socket.IO:", data);
-    currentLift.value = data;
-    if (data && judgeId.value) {
-        showMessage(`New Active Lift: ${data.lifter_name} - ${data.weight_lifted}kg`, "info");
-    } else if (!data) {
-        showMessage("Active lift cleared by organizer.", "info");
+  socket.on("active_lift_changed", (_data) => {
+    // console.log("Active lift changed via Socket.IO for JudgesView:", _data);
+    currentLift.value = _data;
+    hasScored.value = checkIfJudgeHasScored(currentLift.value); // Reset score status for new active lift
+    scoreError.value = null; // Clear previous score errors
+  });
+
+  socket.on("lift_updated", (_data) => {
+    // console.log("Lift updated via Socket.IO for JudgesView:", _data);
+    if (currentLift.value && currentLift.value.id === _data.id) {
+      currentLift.value = _data;
+      hasScored.value = checkIfJudgeHasScored(currentLift.value); // Re-check if this judge has scored
     }
   });
-
-  socket.on("lift_updated", (data) => {
-    // console.log("Judge App: Lift updated via Socket.IO:", data);
-    if (currentLift.value && currentLift.value.id === data.id) {
-      currentLift.value = data;
-      // Optionally show a message when scores are updated or overall result changes
-      if (data.overall_result !== null) {
-        showMessage(`Lift for ${data.lifter_name} resulted in: ${data.overall_result ? 'GOOD LIFT' : 'NO LIFT'}`, 'info');
-      }
-    }
-  });
-});
-
-onUnmounted(() => {
-  socket.off("connect");
-  socket.off("active_lift_changed");
-  socket.off("lift_updated");
 });
 </script>
 
 <style scoped>
-/* Scoped styles specific to JudgeView */
-/* Adjust background, card styles, and button colors as needed */
-
-/* Generic styles that might be useful */
-.message-box {
-  @apply font-medium;
-}
-
-.login-card {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.pin-input {
-  /* Tailwind classes handle most of it */
-}
-
-.login-btn {
-  /* Tailwind classes handle most of it */
-}
-
-.error-message {
-  /* Tailwind classes handle most of it */
-}
-
-.info-text {
-  /* Tailwind classes handle most of it */
-}
-
-.scorecard-container {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.current-lift-card {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.lifter-name {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.details {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.lift-type {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.weight-lifted {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.judge-buttons {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.good-lift-btn {
-  /* Tailwind classes handle most of it */
-}
-
-.bad-lift-btn {
-  /* Tailwind classes handle most of it */
-}
-
-.current-scores {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.score-good {
-  @apply text-green-600 font-semibold;
-}
-
-.score-bad {
-  @apply text-red-600 font-semibold;
-}
-
-.overall-result {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.no-active-lift {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.judge-id-section {
-  /* No specific styling needed beyond Tailwind classes for now */
-}
-
-.logout-btn {
-  /* Tailwind classes handle most of it */
-}
+/* Scoped styles for JudgesView if needed */
 </style>

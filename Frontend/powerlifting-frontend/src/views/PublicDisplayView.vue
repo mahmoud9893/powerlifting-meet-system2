@@ -1,6 +1,7 @@
 <template>
   <div class="public-display-view p-6 bg-gray-900 min-h-screen text-white">
-    <h1 class="text-4xl font-extrabold text-indigo-400 mb-6 border-b-4 border-indigo-500 pb-2">
+    <h1
+      class="text-4xl font-extrabold text-indigo-400 mb-6 border-b-4 border-indigo-500 pb-2">
       Live Meet Display
     </h1>
 
@@ -8,7 +9,7 @@
     <div class="mb-8 p-6 bg-gray-800 rounded-lg shadow-xl">
       <h2 class="text-3xl font-bold text-indigo-300 mb-4 flex items-center">
         <svg
-          class="mr-3 h-8 w-8 text-indigo-400"
+          class="mr-3 h-6 w-6 text-indigo-400"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
@@ -36,10 +37,11 @@
         </p>
         <p>
           <strong class="text-indigo-200">Active Lift ID:</strong>
-          <span :class="{
-            'text-green-400 font-semibold': meetState.current_active_lift_id,
-            'text-gray-500 italic': !meetState.current_active_lift_id,
-          }">
+          <span
+            :class="{
+              'text-green-400 font-semibold': meetState.current_active_lift_id,
+              'text-gray-500 italic': !meetState.current_active_lift_id,
+            }">
             {{ meetState.current_active_lift_id || "None" }}
           </span>
         </p>
@@ -51,7 +53,7 @@
     <div class="mb-8 p-6 bg-gray-800 rounded-lg shadow-xl">
       <h2 class="text-3xl font-bold text-indigo-300 mb-4 flex items-center">
         <svg
-          class="mr-3 h-8 w-8 text-indigo-400"
+          class="mr-3 h-6 w-6 text-indigo-400"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
@@ -72,7 +74,8 @@
         </p>
         <p class="text-2xl text-indigo-200 mb-3">
           ID: {{ currentLift.lifter_id_number }} |
-          {{ currentLift.lift_type.toUpperCase() }} | Attempt
+          <!-- Added safe navigation for lift_type -->
+          {{ currentLift.lift_type ? currentLift.lift_type.toUpperCase() : '' }} | Attempt
           {{ currentLift.attempt_number }}
         </p>
         <p class="text-6xl font-black text-yellow-300 mb-4">
@@ -119,7 +122,7 @@
     <div class="p-6 bg-gray-800 rounded-lg shadow-xl">
       <h2 class="text-3xl font-bold text-indigo-300 mb-4 flex items-center">
         <svg
-          class="mr-3 h-8 w-8 text-indigo-400"
+          class="mr-3 h-6 w-6 text-indigo-400"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
@@ -287,7 +290,7 @@ onMounted(() => {
     if (currentLift.value && currentLift.value.id === _data.id) {
       currentLift.value = _data;
     }
-    fetchNextLiftsInQueue();
+    fetchNextLillsInQueue(); // Make sure this is called to update queue dynamically
   });
 });
 

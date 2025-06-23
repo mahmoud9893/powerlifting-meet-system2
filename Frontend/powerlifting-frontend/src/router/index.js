@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "../views/HomeView.vue";
 import OrganizerView from "../views/OrganizerView.vue";
 import PublicDisplayView from "../views/PublicDisplayView.vue";
-import JudgeView from "../views/JudgeView.vue"; // Corrected path after moving the file
+// Ensure you are importing the JudgesView.vue file that was provided
+import JudgesView from '../views/JudgesView.vue'
 
 const routes = [
   {
@@ -16,15 +17,15 @@ const routes = [
     component: OrganizerView
   },
   {
-    path: "/public",
-    name: "public",
+    path: "/display", // Changed from /public to /display to match your URL
+    name: "display", // Changed name for consistency
     component: PublicDisplayView
   },
   {
     // Judge App Route
     path: "/judge",
     name: "judge",
-    component: JudgeView
+    component: JudgesView // Ensure this uses JudgesView, not JudgeView
   }
 ];
 
