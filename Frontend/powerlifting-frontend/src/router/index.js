@@ -2,8 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "../views/HomeView.vue";
 import OrganizerView from "../views/OrganizerView.vue";
 import PublicDisplayView from "../views/PublicDisplayView.vue";
-// Ensure you are importing the JudgesView.vue file that was provided
-import JudgesView from '../views/JudgesView.vue'
+// Remove the direct import: import JudgesView from '../views/JudgesView.vue'
 
 const routes = [
   {
@@ -17,15 +16,15 @@ const routes = [
     component: OrganizerView
   },
   {
-    path: "/display", // Changed from /public to /display to match your URL
-    name: "display", // Changed name for consistency
+    path: "/display", // Confirmed path for consistency
+    name: "display",
     component: PublicDisplayView
   },
   {
-    // Judge App Route
+    // Judge App Route - Using dynamic import for lazy loading
     path: "/judge",
     name: "judge",
-    component: JudgesView // Ensure this uses JudgesView, not JudgeView
+    component: () => import('../views/JudgesView.vue') // This is the key change!
   }
 ];
 
