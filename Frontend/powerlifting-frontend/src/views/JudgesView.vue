@@ -1,7 +1,7 @@
 <template>
   <div class="judges-view p-6 bg-gray-900 min-h-screen text-white flex flex-col items-center justify-center">
     <h1 class="text-4xl font-extrabold text-teal-400 mb-8 border-b-4 border-teal-500 pb-2 text-center">
-      Judge Panel
+      Judge Panel <!-- forcing rebuild -->
     </h1>
 
     <div v-if="!judgeName" class="login-section bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
