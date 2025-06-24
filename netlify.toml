@@ -1,10 +1,10 @@
 [build]
-  # Remove the 'base' directory setting as we're now using absolute paths in command and publish
-  command = "cd Frontend/powerlifting-frontend && npm run build --no-lint" # Navigate and build within the frontend sub-directory
-  publish = "Frontend/powerlifting-frontend/dist" # Specify the full path to the dist folder from the repo root
+  base = "Frontend/powerlifting-frontend" # <-- IMPORTANT: This tells Netlify where your project is
+  command = "npm run build --no-lint" # <-- Run this command INSIDE the 'base' directory
+  publish = "Frontend/powerlifting-frontend/dist" # <-- This is the ABSOLUTE path to your built files from repo root
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  force = true # Ensures this rule takes precedence over Netlify's default 404
+  force = true # Ensures this rule takes precedence
