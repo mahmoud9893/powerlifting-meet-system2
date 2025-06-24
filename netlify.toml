@@ -1,11 +1,11 @@
-    [build]
-      # No 'base' directory defined here. Build will start from the repo root.
-      command = "cd Frontend/powerlifting-frontend && npm run build --no-lint" # Navigate and build
-      publish = "Frontend/powerlifting-frontend/dist" # Absolute path from repo root to published files
+[build]
+  # No 'base' directory defined here. Build will start from the repo root.
+  # Command now includes npm install after changing directory
+  command = "cd Frontend/powerlifting-frontend && npm install && npm run build --no-lint" # <-- CRUCIAL CHANGE HERE
+  publish = "Frontend/powerlifting-frontend/dist" # Absolute path from repo root to published files
 
-    [[redirects]]
-      from = "/*"
-      to = "/index.html"
-      status = 200
-      force = true
-    
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
