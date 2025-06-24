@@ -1,11 +1,19 @@
-[build]
-  # No 'base' directory defined here. Build will start from the repo root.
-  # Command now includes npm install after changing directory
-  command = "cd Frontend/powerlifting-frontend && npm install && npm run build --no-lint" # <-- CRUCIAL CHANGE HERE
-  publish = "Frontend/powerlifting-frontend/dist" # Absolute path from repo root to published files
+    [build]
+      # 'base' tells Netlify to change its working directory to this path
+      # before running the 'command'. All paths in 'command' and 'publish'
+      # are then relative to this 'base' directory.
+      base = "Frontend/powerlifting-frontend" 
+      
+      # 'command' runs the build script. 'npm install' is crucial for dependencies.
+      command = "npm install && npm run build --no-lint" 
+      
+      # 'publish' tells Netlify where to find the static files to deploy.
+      # This path is relative to the 'base' directory.
+      publish = "dist" 
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
+    [[redirects]]
+      from = "/*"
+      to = "/index.html"
+      status = 200
+      force = true # Ensures this redirect always applies for SPAs
+    
