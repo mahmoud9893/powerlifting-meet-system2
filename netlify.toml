@@ -1,7 +1,7 @@
     [build]
-      base = "Frontend/powerlifting-frontend" # This tells Netlify to change working directory here
-      command = "npm run build --no-lint"
-      publish = "dist" # This must be RELATIVE to the 'base' directory
+      # No 'base' directory defined here. Build will start from the repo root.
+      command = "cd Frontend/powerlifting-frontend && npm run build --no-lint" # Navigate and build
+      publish = "Frontend/powerlifting-frontend/dist" # Absolute path from repo root to published files
 
     [[redirects]]
       from = "/*"
