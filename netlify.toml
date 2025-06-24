@@ -1,10 +1,11 @@
-[build]
-  base = "Frontend/powerlifting-frontend" # <-- IMPORTANT: This tells Netlify where your project is
-  command = "npm run build --no-lint" # <-- Run this command INSIDE the 'base' directory
-  publish = "Frontend/powerlifting-frontend/dist" # <-- This is the ABSOLUTE path to your built files from repo root
+    [build]
+      base = "Frontend/powerlifting-frontend" # This tells Netlify to change working directory here
+      command = "npm run build --no-lint"
+      publish = "dist" # This must be RELATIVE to the 'base' directory
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true # Ensures this rule takes precedence
+    [[redirects]]
+      from = "/*"
+      to = "/index.html"
+      status = 200
+      force = true
+    
