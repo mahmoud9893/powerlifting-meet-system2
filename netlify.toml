@@ -1,0 +1,11 @@
+    [build]
+      base = "Frontend/powerlifting-frontend"
+      command = "npm run build --no-lint"
+      publish = "Frontend/powerlifting-frontend/dist"
+
+    [[redirects]]
+      from = "/*"
+      to = "/index.html"
+      status = 200
+      force = true # Ensures this rule takes precedence
+    
