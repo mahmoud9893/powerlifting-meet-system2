@@ -1,7 +1,7 @@
 <template>
   <div class="judges-view p-6 bg-gray-900 min-h-screen text-white flex flex-col items-center justify-center">
     <h1 class="text-4xl font-extrabold text-teal-400 mb-8 border-b-4 border-teal-500 pb-2 text-center">
-      Judge Panel <!-- forcing rebuild -->
+      Judge Panel
     </h1>
 
     <div v-if="!judgeName" class="login-section bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
@@ -79,6 +79,11 @@ const currentLift = ref(null);
 const scoreError = ref(null);
 const hasScored = ref(false);
 
+// Store the successfully logged-in PIN, as the backend seems to need it for scoring.
+// This is not ideal for security but necessary if backend requires it per request.
+const loggedInPin = ref(localStorage.getItem("loggedInPin") || ""); 
+
+
 const BACKEND_API_URL = "https://powerlifting-meet-system24.onrender.com";
 const SOCKET_IO_URL = "https://powerlifting-meet-system24.onrender.com";
 
@@ -96,21 +101,30 @@ const login = async () => {
     const data = await response.json();
     if (response.ok) {
       judgeName.value = data.judge_id;
-      localStorage.setItem("judgeName", data.judge_id); // Persist login
-      pin.value = ""; // Clear pin
-      fetchCurrentLift(); // Fetch current lift immediately after login
+      localStorage.setItem("judgeName", data.judge_id);
+      loggedInPin.value = pin.value; // Store the successful PIN
+      localStorage.setItem("loggedInPin", pin.value); // Persist the PIN (use with caution)
+      pin.value = ""; // Clear input field
+      fetchCurrentLift();
     } else {
       loginError.value = data.error || "Login failed.";
+      // Important: Clear loggedInPin if login fails
+      loggedInPin.value = "";
+      localStorage.removeItem("loggedInPin");
     }
   } catch (error) {
     loginError.value = "Network error during login.";
     console.error("Login network error:", error);
+    loggedInPin.value = ""; // Clear on network error too
+    localStorage.removeItem("loggedInPin");
   }
 };
 
 const logout = () => {
   judgeName.value = null;
   localStorage.removeItem("judgeName");
+  loggedInPin.value = ""; // Clear stored PIN on logout
+  localStorage.removeItem("loggedInPin");
   currentLift.value = null;
   hasScored.value = false;
   scoreError.value = null;
@@ -123,13 +137,12 @@ const fetchCurrentLift = async () => {
     if (response.ok) {
       const data = await response.json();
       currentLift.value = Object.keys(data).length > 0 ? data : null;
-      hasScored.value = checkIfJudgeHasScored(currentLift.value); // Reset score status
+      hasScored.value = checkIfJudgeHasScored(currentLift.value);
     } else {
       currentLift.value = null;
       console.error("Failed to fetch current lift:", response.statusText);
     }
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Network error fetching current lift:", error);
   }
 };
@@ -150,18 +163,24 @@ const submitScore = async (score) => {
     scoreError.value = "No active lift or not logged in.";
     return;
   }
+  
+  // Ensure we have a PIN if the backend requires it for scoring
+  if (!loggedInPin.value) {
+    scoreError.value = "Not logged in or PIN not available. Please re-login.";
+    return;
+  }
 
   try {
     const response = await fetch(`${BACKEND_API_URL}/lifts/${currentLift.value.id}/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ judge_pin: pin.value, score: score }), // Send actual pin for validation
+      // Send the stored loggedInPin, NOT the cleared pin.value
+      body: JSON.stringify({ judge_pin: loggedInPin.value, score: score }), // <-- CRITICAL CHANGE HERE
     });
     const data = await response.json();
     if (response.ok) {
-      // Update local currentLift with the latest data from backend
       currentLift.value = data;
-      hasScored.value = checkIfJudgeHasScored(currentLift.value); // Re-check after update
+      hasScored.value = checkIfJudgeHasScored(currentLift.value);
     } else {
       scoreError.value = data.error || "Failed to submit score.";
     }
@@ -173,7 +192,7 @@ const submitScore = async (score) => {
 
 // --- Socket.IO Event Listeners ---
 onMounted(() => {
-  // Only fetch current lift on mount if already logged in (e.g., from localStorage)
+  // If already logged in (e.g., from localStorage), fetch current lift
   if (judgeName.value) {
     fetchCurrentLift();
   }
@@ -185,15 +204,15 @@ onMounted(() => {
   socket.on("active_lift_changed", (_data) => {
     // console.log("Active lift changed via Socket.IO for JudgesView:", _data);
     currentLift.value = _data;
-    hasScored.value = checkIfJudgeHasScored(currentLift.value); // Reset score status for new active lift
-    scoreError.value = null; // Clear previous score errors
+    hasScored.value = checkIfJudgeHasScored(currentLift.value);
+    scoreError.value = null;
   });
 
   socket.on("lift_updated", (_data) => {
     // console.log("Lift updated via Socket.IO for JudgesView:", _data);
     if (currentLift.value && currentLift.value.id === _data.id) {
       currentLift.value = _data;
-      hasScored.value = checkIfJudgeHasScored(currentLift.value); // Re-check if this judge has scored
+      hasScored.value = checkIfJudgeHasScored(currentLift.value);
     }
   });
 });
