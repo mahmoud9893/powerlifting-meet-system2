@@ -1,19 +1,14 @@
-    [build]
-      # 'base' tells Netlify to change its working directory to this path
-      # before running the 'command'. All paths in 'command' and 'publish'
-      # are then relative to this 'base' directory.
-      base = "Frontend/powerlifting-frontend" 
-      
-      # 'command' runs the build script. 'npm install' is crucial for dependencies.
-      command = "npm install && npm run build --no-lint" 
-      
-      # 'publish' tells Netlify where to find the static files to deploy.
-      # This path is relative to the 'base' directory.
-      publish = "dist" 
+[build]
+  base = "Frontend/powerlifting-frontend" 
+  command = "npm install && npm run build --no-lint" 
+  publish = "dist" 
 
-    [[redirects]]
-      from = "/*"
-      to = "/index.html"
-      status = 200
-      force = true # Ensures this redirect always applies for SPAs
-    
+[[redirects]]
+  # This rule ensures all requests that are NOT for existing files
+  # (like /js/app.js or /css/app.css) are redirected to index.html for Vue Router.
+  # The ! is crucial.
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false # <-- CRITICAL CHANGE: Set force to false
+  # You might also use 'from = "/!(assets|js|css)/*"' but 'force = false' is often sufficient
