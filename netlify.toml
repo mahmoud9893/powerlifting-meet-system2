@@ -1,11 +1,10 @@
-    [build]
-      base = "Frontend/powerlifting-frontend"
-      command = "npm run build --no-lint"
-      publish = "Frontend/powerlifting-frontend/dist"
+[build]
+  base = "Frontend/powerlifting-frontend"
+  command = "npm run build --no-lint"
+  publish = "dist" # <-- This is the crucial correction: relative to 'base'
 
-    [[redirects]]
-      from = "/*"
-      to = "/index.html"
-      status = 200
-      force = true # Ensures this rule takes precedence
-    
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true # Ensures this rule takes precedence
