@@ -1,14 +1,16 @@
-[build]
-  base = "Frontend/powerlifting-frontend" 
-  command = "npm install && npm run build --no-lint" 
-  publish = "dist" 
+    [build]
+      base = "Frontend/powerlifting-frontend" 
+      command = "npm install && npm run build --no-lint" 
+      publish = "dist" 
 
-[[redirects]]
-  # This rule ensures all requests that are NOT for existing files
-  # (like /js/app.js or /css/app.css) are redirected to index.html for Vue Router.
-  # The ! is crucial.
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false # <-- CRITICAL CHANGE: Set force to false
-  # You might also use 'from = "/!(assets|js|css)/*"' but 'force = false' is often sufficient
+    [[redirects]]
+      # This rule explicitly redirects paths that are NOT files (like .js, .css, .ico, etc.)
+      # to index.html. This is crucial for SPAs where Vue Router handles deep links,
+      # but Netlify must still serve actual static assets.
+      from = "/*"
+      to = "/index.html"
+      status = 200
+      # Netlify's default behavior for 200 redirects is to check for existing files first.
+      # This is why 'force = false' (the default) is the desired behavior for SPAs.
+      # We'll rely on the implicit check or if this fails, try more complex regex.
+    
