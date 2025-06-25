@@ -1,14 +1,19 @@
 <template>
-  <div class="organizer-view p-6 bg-gray-100 min-h-screen">
-    <h1 class="mb-6 border-b pb-2 text-3xl font-bold text-gray-800">
-      Organizer Dashboard
+  <!-- Main container for the Organizer View. Added dark background and Inter font. -->
+  <div class="min-h-screen bg-gray-950 text-white p-6 font-inter">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Main heading with gradient text for a strong, modern feel -->
+    <h1
+      class="text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500 mb-8 border-b-4 border-indigo-500 pb-2">
+      Meet Organizer Panel
     </h1>
 
-    <!-- Current Meet State & Actions -->
-    <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2 class="mb-4 flex items-center text-xl md:text-2xl font-semibold text-gray-700">
+    <!-- Meet State Card -->
+    <div class="mb-8 p-6 bg-gray-800 rounded-2xl shadow-xl border border-gray-700">
+      <h2 class="text-3xl font-bold text-indigo-300 mb-4 flex items-center">
         <svg
-          class="mr-2 h-5 w-5 md:h-6 md:w-6 text-indigo-600"
+          class="mr-3 h-6 w-6 text-indigo-400"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
@@ -19,78 +24,129 @@
             stroke-linecap="round"
             stroke-linejoin="round" />
         </svg>
-        Meet State
+        Current Meet State
       </h2>
-      <div
-        v-if="meetState"
-        class="grid grid-cols-1 gap-2 text-base md:text-lg md:grid-cols-2">
-        <p>
-          <strong>Current Lift Type:</strong>
-          <span class="capitalize font-medium text-indigo-700">{{
-            meetState.current_lift_type
-          }}</span>
-        </p>
-        <p>
-          <strong>Current Attempt:</strong>
-          <span class="font-medium text-indigo-700">{{
-            meetState.current_attempt_number
-          }}</span>
-        </p>
-        <p>
-          <strong>Active Lift ID:</strong>
-          <span
-            :class="{
-              'font-medium text-green-600': meetState.current_active_lift_id,
-              'italic text-gray-500': !meetState.current_active_lift_id,
-            }">
-            {{ meetState.current_active_lift_id || "None" }}
-          </span>
-        </p>
+      <div v-if="meetState" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xl">
+        <p><strong class="text-indigo-200">Current Lift Type:</strong> <span class="capitalize text-indigo-400 font-extrabold">{{ meetState.current_lift_type }}</span></p>
+        <p><strong class="text-indigo-200">Current Attempt:</strong> <span class="text-indigo-400 font-extrabold">{{ meetState.current_attempt_number }}</span></p>
+        <p><strong class="text-indigo-200">Active Lift ID:</strong> <span :class="{ 'text-green-400 font-semibold': meetState.current_active_lift_id, 'text-gray-500 italic': !meetState.current_active_lift_id }">{{ meetState.current_active_lift_id || 'None' }}</span></p>
       </div>
-      <div v-else class="text-gray-600 text-base md:text-lg">Loading meet state...</div>
+      <div v-else class="text-gray-500 text-xl">Loading meet state...</div>
 
-      <div class="border-t pt-4 mt-6">
-        <h3 class="mb-3 text-lg md:text-xl font-semibold text-gray-700">Control Panel</h3>
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          <button
-            :class="{ 'bg-indigo-700': meetState?.current_lift_type === 'squat' }"
-            class="btn-primary"
-            @click="changeLiftType('squat')">
-            Set Squat
-          </button>
-          <button
-            :class="{ 'bg-indigo-700': meetState?.current_lift_type === 'bench' }"
-            class="btn-primary"
-            @click="changeLiftType('bench')">
-            Set Bench
-          </button>
-          <button
-            :class="{ 'bg-indigo-700': meetState?.current_lift_type === 'deadlift' }"
-            class="btn-primary"
-            @click="changeLiftType('deadlift')">
-            Set Deadlift
-          </button>
-          <button
-            :disabled="meetState?.current_attempt_number === 3"
-            class="btn-secondary"
-            @click="advanceAttempt">
-            Advance Attempt ({{ meetState?.current_attempt_number || 0 }}/3)
-          </button>
-          <button class="btn-success" @click="setActiveLift(null)">
-            Auto Set Next Active Lift
-          </button>
-          <button class="btn-info" @click="exportMeetData">
-            Export Meet Data (Excel)
-          </button>
-        </div>
+      <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Buttons with new styling: gradient, rounded, shadow, hover effects -->
+        <button
+          @click="advanceAttempt"
+          class="
+            bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700
+            text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+            transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-teal-500 focus:ring-opacity-50
+          ">
+          Advance Attempt
+        </button>
+        <button
+          @click="setLiftType('squat')"
+          class="
+            bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700
+            text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+            transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50
+          ">
+          Set Squat
+        </button>
+        <button
+          @click="setLiftType('bench')"
+          class="
+            bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700
+            text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+            transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50
+          ">
+          Set Bench
+        </button>
+        <button
+          @click="setLiftType('deadlift')"
+          class="
+            bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700
+            text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+            transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50
+          ">
+          Set Deadlift
+        </button>
+        <button
+          @click="resetMeet"
+          class="
+            bg-red-600 hover:bg-red-700 active:bg-red-800
+            text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+            transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-opacity-50
+          ">
+          Reset Meet
+        </button>
       </div>
     </div>
 
-    <!-- Current Active Lift Details -->
-    <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2 class="mb-4 flex items-center text-xl md:text-2xl font-semibold text-gray-700">
+    <!-- Add Lifter Section -->
+    <div class="mb-8 p-6 bg-gray-800 rounded-2xl shadow-xl border border-gray-700">
+      <h2 class="text-3xl font-bold text-green-300 mb-4 flex items-center">
         <svg
-          class="mr-2 h-5 w-5 md:h-6 md:w-6 text-indigo-600"
+          class="mr-3 h-6 w-6 text-green-400"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-6-9e7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3.328c-.283-.585-.595-1.096-.925-1.536C12.435 4.095 11.233 4 10 4s-2.435.095-3.747.464c-.33.44-.642.951-.925 1.536H5z" />
+        </svg>
+        Add Lifter
+      </h2>
+      <form @submit.prevent="addLifter" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="lifterName" class="block text-gray-400 text-sm font-bold mb-2">Lifter Name:</label>
+          <input
+            type="text"
+            id="lifterName"
+            v-model="newLifter.lifter_name"
+            required
+            class="
+              w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600
+              focus:ring-2 focus:ring-green-500 focus:border-transparent
+              transition duration-200 ease-in-out
+            "
+          />
+        </div>
+        <div>
+          <label for="lifterId" class="block text-gray-400 text-sm font-bold mb-2">Lifter ID Number:</label>
+          <input
+            type="text"
+            id="lifterId"
+            v-model="newLifter.lifter_id_number"
+            required
+            class="
+              w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600
+              focus:ring-2 focus:ring-green-500 focus:border-transparent
+              transition duration-200 ease-in-out
+            "
+          />
+        </div>
+        <div class="md:col-span-2">
+          <button
+            type="submit"
+            class="
+              w-full
+              bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700
+              text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+              transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50
+            ">
+            Add Lifter
+          </button>
+        </div>
+        <p v-if="lifterAddMessage" :class="lifterAddMessageType === 'success' ? 'text-green-400' : 'text-red-400'" class="md:col-span-2 mt-2">{{ lifterAddMessage }}</p>
+      </form>
+    </div>
+
+    <!-- Current Active Lift Display -->
+    <div class="mb-8 p-6 bg-gray-800 rounded-2xl shadow-xl border border-gray-700">
+      <h2 class="text-3xl font-bold text-yellow-300 mb-4 flex items-center">
+        <svg
+          class="mr-3 h-6 w-6 text-yellow-400"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
@@ -103,101 +159,77 @@
         </svg>
         Current Active Lift
       </h2>
-      <div
-        v-if="currentLift"
-        class="rounded-md border border-indigo-200 bg-indigo-50 p-4">
-        <p class="mb-2 text-lg md:text-xl font-bold text-indigo-800">
-          {{ currentLift.lifter_name }} ({{ currentLift.lifter_id_number }}) -
-          {{ currentLift.lift_type.toUpperCase() }}
+      <div v-if="currentLift" class="bg-indigo-700 p-6 rounded-md border-2 border-indigo-500 text-center">
+        <p class="text-4xl font-extrabold mb-2 text-white">
+          {{ currentLift.lifter_name }}
         </p>
-        <p class="text-base md:text-lg">
-          Weight:
-          <span class="font-semibold">{{ currentLift.weight_lifted }} kg</span>
-          | Attempt:
-          <span class="font-semibold">{{ currentLift.attempt_number }}</span>
+        <p class="text-2xl text-indigo-200 mb-3">
+          ID: {{ currentLift.lifter_id_number }} |
+          {{ currentLift.lift_type ? currentLift.lift_type.toUpperCase() : '' }} | Attempt
+          {{ currentLift.attempt_number }}
         </p>
-        <p class="text-sm md:text-base text-gray-600">Status: {{ currentLift.status }}</p>
-        <div class="mt-3 text-sm md:text-base">
-          <p>
-            Judge 1:
-            <span :class="scoreClass(currentLift.judge1_score)">{{
-              formatScore(currentLift.judge1_score)
-            }}</span>
-          </p>
-          <p>
-            Judge 2:
-            <span :class="scoreClass(currentLift.judge2_score)">{{
-              formatScore(currentLift.judge2_score)
-            }}</span>
-          </p>
-          <p>
-            Judge 3:
-            <span :class="scoreClass(currentLift.judge3_score)">{{
-              formatScore(currentLift.judge3_score)
-            }}</span>
-          </p>
-          <p class="mt-2 font-bold text-base md:text-lg">
-            Overall Result:
-            <span :class="overallResultClass(currentLift.overall_result)">{{
-              formatOverallResult(currentLift.overall_result)
-            }}</span>
-          </p>
-        </div>
+        <p class="text-6xl font-black text-yellow-300 mb-4">
+          {{ currentLift.weight_lifted }} kg
+        </p>
       </div>
-      <div v-else class="italic text-gray-600 text-base md:text-lg">No lift currently active.</div>
+      <div v-else class="text-gray-500 italic text-2xl text-center">
+        No lifter currently active.
+      </div>
+      
+      <div class="mt-8">
+        <button
+          @click="advanceToNextLift"
+          class="
+            w-full
+            bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700
+            text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+            transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-orange-500 focus:ring-opacity-50
+          ">
+          Advance to Next Lift (Set Active)
+        </button>
+      </div>
     </div>
 
-    <!-- Pending Lifts in Queue -->
-    <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2 class="mb-4 flex items-center text-xl md:text-2xl font-semibold text-gray-700">
+    <!-- Lifters List -->
+    <div class="p-6 bg-gray-800 rounded-2xl shadow-xl border border-gray-700">
+      <h2 class="text-3xl font-bold text-blue-300 mb-4 flex items-center">
         <svg
-          class="mr-2 h-5 w-5 md:h-6 md:w-6 text-indigo-600"
+          class="mr-3 h-6 w-6 text-blue-400"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            stroke-linecap="round"
-            stroke-linejoin="round" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-3M17 14h.01M10 6h.01M10 12h.01M10 18h.01M4 14h.01M4 20h.01M4 6h.01M7 10h10a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75H7a.75.75 0 00-.75.75v4.5c0 .414.336.75.75.75z" />
         </svg>
-        Next Lifts in Queue ({{ meetState?.current_lift_type }} - Attempt
-        {{ meetState?.current_attempt_number }})
+        Registered Lifters
       </h2>
-      <div v-if="nextLiftsInQueue.length > 0">
+      <div v-if="lifters.length > 0">
         <div class="overflow-x-auto">
-          <table class="min-w-full border border-gray-200 bg-white text-sm md:text-base">
-            <thead>
-              <tr
-                class="bg-gray-100 text-left text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-600">
-                <th class="border-b-2 border-gray-200 px-6 py-3">
-                  Lifter Name
-                </th>
-                <th class="border-b-2 border-gray-200 px-6 py-3">Lifter ID</th>
-                <th class="border-b-2 border-gray-200 px-6 py-3">Weight</th>
-                <th class="border-b-2 border-gray-200 px-6 py-3">Action</th>
+          <table class="min-w-full bg-gray-700 text-white rounded-lg overflow-hidden text-lg">
+            <thead class="bg-gray-600">
+              <tr class="text-left text-sm font-semibold uppercase tracking-wider text-gray-300">
+                <th class="px-6 py-3">Name</th>
+                <th class="px-6 py-3">ID</th>
+                <th class="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="lift in nextLiftsInQueue"
-                :key="lift.id"
-                class="hover:bg-gray-50">
-                <td class="border-b border-gray-200 px-6 py-4">
-                  {{ lift.lifter_name }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                  {{ lift.lifter_id_number }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                  {{ lift.weight_lifted }} kg
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
+                v-for="lifter in lifters"
+                :key="lifter.id"
+                class="border-t border-gray-600 hover:bg-gray-600">
+                <td class="px-6 py-4">{{ lifter.lifter_name }}</td>
+                <td class="px-6 py-4">{{ lifter.lifter_id_number }}</td>
+                <td class="px-6 py-4 text-center">
                   <button
-                    class="btn-small-primary"
-                    @click="setActiveLift(lift.id)">
-                    Set Active
+                    @click="deleteLifter(lifter.id)"
+                    class="
+                      bg-red-500 hover:bg-red-600 active:bg-red-700
+                      text-white font-bold py-2 px-4 rounded-md shadow-sm transition duration-200 ease-in-out
+                      focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-gray-800
+                    ">
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -205,339 +237,8 @@
           </table>
         </div>
       </div>
-      <div v-else class="italic text-gray-600 text-base md:text-lg">
-        No pending lifts for the current type and attempt.
-      </div>
-    </div>
-
-    <!-- Lifter Management -->
-    <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2 class="mb-4 flex items-center text-xl md:text-2xl font-semibold text-gray-700">
-        <svg
-          class="mr-2 h-5 w-5 md:h-6 md:w-6 text-indigo-600"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H2v-2a3 3 0 015.356-1.857M17 20v-2c0-.653-.106-1.294-.308-1.884c.3-.12.63-.19.968-.19h.324c1.652 0 3-1.348 3-3V7a3 3 0 00-3-3H4a3 3 0 00-3 3v7c0 1.652 1.348 3 3 3h.324c.338 0 .668.07.968.19A3 3 0 007 18v2H2"
-            stroke-linecap="round"
-            stroke-linejoin="round" />
-        </svg>
-        Lifter Management
-      </h2>
-
-      <div class="mb-6 rounded-md border bg-gray-50 p-4">
-        <h3 class="mb-3 text-lg md:text-xl font-semibold text-gray-700">Add New Lifter</h3>
-        <form
-          class="grid grid-cols-1 gap-4 md:grid-cols-2"
-          @submit.prevent="addLifter">
-          <input
-            v-model="newLifter.name"
-            class="form-input text-sm md:text-base"
-            placeholder="Name"
-            required
-            type="text" />
-          <select v-model="newLifter.gender" class="form-select text-sm md:text-base" required>
-            <option value="" disabled>Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-          <input
-            v-model="newLifter.lifter_id_number"
-            class="form-input text-sm md:text-base"
-            placeholder="Lifter ID"
-            required
-            type="text" />
-          <input
-            v-model.number="newLifter.actual_weight"
-            class="form-input text-sm md:text-base"
-            placeholder="Actual Weight (kg)"
-            required
-            step="0.01"
-            type="number" />
-          <input
-            v-model="newLifter.birth_date"
-            class="form-input text-sm md:text-base"
-            placeholder="Birth Date"
-            required
-            type="date" />
-          <input
-            v-model.number="newLifter.opener_squat"
-            class="form-input text-sm md:text-base"
-            placeholder="Opener Squat (kg)"
-            required
-            step="0.01"
-            type="number" />
-          <input
-            v-model.number="newLifter.opener_bench"
-            class="form-input text-sm md:text-base"
-            placeholder="Opener Bench (kg)"
-            required
-            step="0.01"
-            type="number" />
-          <input
-            v-model.number="newLifter.opener_deadlift"
-            class="form-input text-sm md:text-base"
-            placeholder="Opener Deadlift (kg)"
-            required
-            step="0.01"
-            type="number" />
-          <button class="btn-primary col-span-full" type="submit">
-            Add Lifter
-          </button>
-        </form>
-      </div>
-
-      <h3 class="mb-3 mt-8 text-lg md:text-xl font-semibold text-gray-700">
-        All Registered Lifters
-      </h3>
-      <div v-if="allLifters.length > 0" class="overflow-x-auto">
-        <table class="min-w-full border border-gray-200 bg-white text-sm md:text-base">
-          <thead>
-            <tr
-              class="bg-gray-100 text-left text-xs md:text-sm font-semibold uppercase tracking-wider text-gray-600">
-              <th class="border-b-2 border-gray-200 px-6 py-3">Name</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">ID</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Gender</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Age</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Weight</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Primary WC</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Primary AC</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Addtl WC</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Addtl AC</th>
-              <th class="border-b-2 border-gray-200 px-6 py-3">Actions</th>
-            </tr>
-          </thead>
-            <tbody>
-            <tr
-                v-for="lifter in allLifters"
-                :key="lifter.id"
-                class="hover:bg-gray-50">
-                <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.name }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.lifter_id_number }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.gender }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.age }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.actual_weight }} kg
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.primary_weight_class_name }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                {{ lifter.primary_age_class_name }}
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                <select
-                    v-model="lifter.selectedAdditionalWeightClass"
-                    class="form-select p-1 text-xs md:text-sm">
-                    <option :value="null">Add Class</option>
-                    <option
-                    v-for="wc in availableWeightClasses(lifter)"
-                    :key="wc.id"
-                    :value="wc.id">
-                    {{ wc.name }}
-                    </option>
-                </select>
-                <button
-                    :disabled="!lifter.selectedAdditionalWeightClass"
-                    class="btn-small-secondary mt-1"
-                    @click="
-                    addAdditionalWeightClass(
-                        lifter.id,
-                        lifter.selectedAdditionalWeightClass
-                    )
-                    ">
-                    Add
-                </button>
-                <div class="mt-1 flex flex-wrap">
-                    <span
-                    v-for="wcName in lifter.additional_weight_class_names"
-                    :key="wcName"
-                    class="badge-class mr-1 mb-1 bg-blue-200 text-blue-800 text-xs md:text-sm">
-                    {{ wcName }}
-                    <button
-                        class="ml-1 font-bold text-blue-600 hover:text-blue-900"
-                        @click="
-                        removeAdditionalWeightClass(
-                            lifter.id,
-                            getWeightClassIdByName(wcName)
-                        )
-                        ">
-                        &times;
-                    </button>
-                    </span>
-                </div>
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                <select
-                    v-model="lifter.selectedAdditionalAgeClass"
-                    class="form-select p-1 text-xs md:text-sm">
-                    <option :value="null">Add Class</option>
-                    <option
-                    v-for="ac in availableAgeClasses(lifter)"
-                    :key="ac.id"
-                    :value="ac.id">
-                    {{ ac.name }}
-                    </option>
-                </select>
-                <button
-                    :disabled="!lifter.selectedAdditionalAgeClass"
-                    class="btn-small-secondary mt-1"
-                    @click="
-                    addAdditionalAgeClass(
-                        lifter.id,
-                        lifter.selectedAdditionalAgeClass
-                    )
-                    ">
-                    Add
-                </button>
-                <div class="mt-1 flex flex-wrap">
-                    <span
-                    v-for="acName in lifter.additional_age_class_names"
-                    :key="acName"
-                    class="badge-class mr-1 mb-1 bg-purple-200 text-purple-800 text-xs md:text-sm">
-                    {{ acName }}
-                    <button
-                        class="ml-1 font-bold text-purple-600 hover:text-purple-900"
-                        @click="
-                        removeAdditionalAgeClass(
-                            lifter.id,
-                            getAgeClassIdByName(acName)
-                        )
-                        ">
-                        &times;
-                    </button>
-                    </span>
-                </div>
-                </td>
-                <td class="border-b border-gray-200 px-6 py-4">
-                <!-- Add more actions like edit lifter if needed -->
-                </td>
-            </tr>
-            </tbody>
-        </table>
-      </div>
-      <div v-else class="italic text-gray-600 text-base md:text-lg">No lifters registered.</div>
-    </div>
-
-    <!-- Class Management -->
-    <div class="mb-8 rounded-lg bg-white p-6 shadow-md">
-      <h2 class="mb-4 flex items-center text-xl md:text-2xl font-semibold text-gray-700">
-        <svg
-          class="mr-2 h-5 w-5 md:h-6 md:w-6 text-indigo-600"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
-            stroke-linecap="round"
-            stroke-linejoin="round" />
-        </svg>
-        Class Management
-      </h2>
-
-      <!-- Weight Class Management -->
-      <div class="mb-6 rounded-md border bg-gray-50 p-4">
-        <h3 class="mb-3 text-lg md:text-xl font-semibold text-gray-700">Weight Classes</h3>
-        <form
-          class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4"
-          @submit.prevent="addWeightClass">
-          <input
-            v-model="newWeightClass.name"
-            class="form-input text-sm md:text-base"
-            placeholder="Class Name (e.g., Men's 83kg)"
-            required
-            type="text" />
-          <input
-            v-model.number="newWeightClass.min_weight"
-            class="form-input text-sm md:text-base"
-            placeholder="Min Weight (kg)"
-            required
-            step="0.01"
-            type="number" />
-          <input
-            v-model.number="newWeightClass.max_weight"
-            class="form-input text-sm md:text-base"
-            placeholder="Max Weight (kg, optional)"
-            step="0.01"
-            type="number" />
-          <select v-model="newWeightClass.gender" class="form-select text-sm md:text-base" required>
-            <option value="" disabled>Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Both">Both</option>
-          </select>
-          <button class="btn-primary col-span-full" type="submit">
-            Add Weight Class
-          </button>
-        </form>
-        <ul class="list-disc pl-5 text-sm md:text-base">
-          <li
-            v-for="wc in weightClasses"
-            :key="wc.id"
-            class="flex items-center justify-between py-1">
-            {{ wc.name }} ({{ wc.min_weight }}kg -
-            {{ wc.max_weight ? wc.max_weight + "kg" : "Open" }}) [{{
-              wc.gender
-            }}]
-            <button class="btn-small-danger" @click="deleteWeightClass(wc.id)">
-              Delete
-            </button>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Age Class Management -->
-      <div class="mb-6 rounded-md border bg-gray-50 p-4 mt-8">
-        <h3 class="mb-3 text-lg md:text-xl font-semibold text-gray-700">Age Classes</h3>
-        <form
-          class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4"
-          @submit.prevent="addAgeClass">
-          <input
-            v-model="newAgeClass.name"
-            class="form-input text-sm md:text-base"
-            placeholder="Class Name (e.g., Junior)"
-            required
-            type="text" />
-          <input
-            v-model.number="newAgeClass.min_age"
-            class="form-input text-sm md:text-base"
-            placeholder="Min Age"
-            required
-            type="number" />
-          <input
-            v-model.number="newAgeClass.max_age"
-            class="form-input text-sm md:text-base"
-            placeholder="Max Age (optional)"
-            type="number" />
-          <button class="btn-primary col-span-full" type="submit">
-            Add Age Class
-          </button>
-        </form>
-        <ul class="list-disc pl-5 text-sm md:text-base">
-          <li
-            v-for="ac in ageClasses"
-            :key="ac.id"
-            class="flex items-center justify-between py-1">
-            {{ ac.name }} ({{ ac.min_age }} -
-            {{ ac.max_age ? ac.max_age + " years" : "Open" }})
-            <button class="btn-small-danger" @click="deleteAgeClass(ac.id)">
-              Delete
-            </button>
-          </li>
-        </ul>
+      <div v-else class="italic text-gray-500 text-2xl text-center">
+        No lifters registered yet.
       </div>
     </div>
   </div>
@@ -550,94 +251,25 @@ import { io } from "socket.io-client";
 // Reactive state variables
 const meetState = ref(null);
 const currentLift = ref(null);
-const allLifters = ref([]);
-const nextLiftsInQueue = ref([]);
-const weightClasses = ref([]);
-const ageClasses = ref([]);
+const lifters = ref([]);
+const newLifter = ref({ lifter_name: "", lifter_id_number: "" });
+const lifterAddMessage = ref(null);
+const lifterAddMessageType = ref(null);
 
-const newLifter = ref({
-  name: "",
-  gender: "",
-  lifter_id_number: "",
-  actual_weight: null,
-  birth_date: "",
-  opener_squat: null,
-  opener_bench: null,
-  opener_deadlift: null,
-});
-
-const newWeightClass = ref({
-  name: "",
-  min_weight: null,
-  max_weight: null,
-  gender: "",
-});
-
-const newAgeClass = ref({
-  name: "",
-  min_age: null,
-  max_age: null,
-});
-
-// IMPORTANT: Directly specify the correct Render backend URL
 const BACKEND_API_URL = "https://powerlifting-meet-system24.onrender.com";
 const SOCKET_IO_URL = "https://powerlifting-meet-system24.onrender.com";
-
 
 // Initialize Socket.IO connection
 const socket = io(SOCKET_IO_URL);
 
-// --- Utility Functions for Display ---
-const formatScore = (score) => {
-  if (score === true) return "GOOD";
-  if (score === false) return "BAD";
-  return "N/A";
-};
-
-const scoreClass = (score) => {
-  if (score === true) return "text-green-600 font-semibold";
-  if (score === false) return "text-red-600 font-semibold";
-  return "text-gray-500 italic";
-};
-
-const formatOverallResult = (result) => {
-  if (result === true) return "GOOD LIFT";
-  if (result === false) return "NO LIFT";
-  return "PENDING";
-};
-
-const overallResultClass = (result) => {
-  if (result === true) return "text-green-700 font-bold";
-  if (result === false) return "text-red-700 font-bold";
-  return "text-orange-500 italic";
-};
-
-// Functions to filter available classes for dropdowns (not computed)
-const availableWeightClasses = (lifter) => {
-  return weightClasses.value.filter(
-    (wc) =>
-      wc.id !== lifter.primary_weight_class_id &&
-      !lifter.additional_weight_class_ids.includes(wc.id)
-  );
-};
-
-const availableAgeClasses = (lifter) => {
-  return ageClasses.value.filter(
-    (ac) =>
-      ac.id !== lifter.primary_age_class_id &&
-      !lifter.additional_age_class_ids.includes(ac.id)
-  );
-};
-
-// Helper to get ID by name (needed for removing additional classes by name)
-const getWeightClassIdByName = (name) => {
-  const wc = weightClasses.value.find((wc) => wc.name === name);
-  return wc ? wc.id : null;
-};
-
-const getAgeClassIdByName = (name) => {
-  const ac = ageClasses.value.find((ac) => ac.name === name);
-  return ac ? ac.id : null;
+// --- Utility Functions ---
+const showLifterAddMessage = (message, type) => {
+  lifterAddMessage.value = message;
+  lifterAddMessageType.value = type;
+  setTimeout(() => {
+    lifterAddMessage.value = null;
+    lifterAddMessageType.value = null;
+  }, 3000); // Message disappears after 3 seconds
 };
 
 // --- Fetching Functions ---
@@ -647,23 +279,7 @@ const fetchMeetState = async () => {
     const data = await response.json();
     meetState.value = data;
   } catch (error) {
-    window.alert("Error fetching meet state. See console for details.");
     console.error("Error fetching meet state:", error);
-  }
-};
-
-const fetchLifters = async () => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/lifters`);
-    const data = await response.json();
-    allLifters.value = data.map((lifter) => ({
-      ...lifter,
-      selectedAdditionalWeightClass: null,
-      selectedAdditionalAgeClass: null,
-    }));
-  } catch (error) {
-    window.alert("Error fetching lifters. See console for details.");
-    console.error("Error fetching lifters:", error);
   }
 };
 
@@ -672,103 +288,29 @@ const fetchCurrentLift = async () => {
     const response = await fetch(`${BACKEND_API_URL}/current_lift`);
     if (response.ok) {
       const data = await response.json();
-      currentLift.value = data;
+      // Check if data is an empty object, indicating no active lift
+      currentLift.value = Object.keys(data).length > 0 ? data : null;
     } else {
-      currentLift.value = null; // No active lift
+      // If response is not ok, assume no current lift or an error
+      currentLift.value = null;
+      console.error("Failed to fetch current lift:", response.statusText);
     }
   } catch (error) {
-    window.alert("Error fetching current lift. See console for details.");
-    console.error("Error fetching current lift:", error);
+    console.error("Network error fetching current lift:", error);
   }
 };
 
-const fetchNextLiftsInQueue = async () => {
+const fetchLifters = async () => {
   try {
-    // This endpoint triggers backend queue logic if needed, then fetches current queue
-    await fetch(`${BACKEND_API_URL}/next_lift_in_queue`);
-    const allLiftsResponse = await fetch(`${BACKEND_API_URL}/lifts`);
-    if (allLiftsResponse.ok) {
-      const allLifts = await allLiftsResponse.json();
-      nextLiftsInQueue.value = allLifts
-        .filter(
-          (lift) =>
-            lift.status === "pending" &&
-            lift.lift_type === meetState.value?.current_lift_type &&
-            lift.attempt_number === meetState.value?.current_attempt_number
-        )
-        .sort((a, b) => {
-          // Sort by weight_lifted (ascending), then by lifter_id_number (ascending)
-          if (a.weight_lifted !== b.weight_lifted) {
-            return a.weight_lifted - b.weight_lifted;
-          }
-          return a.lifter_id_number.localeCompare(b.lifter_id_number);
-        });
-    } else {
-      nextLiftsInQueue.value = [];
-    }
-  } catch (error) {
-    window.alert("Error fetching next lifts in queue. See console for details.");
-    console.error("Error fetching next lifts in queue:", error);
-  }
-};
-
-const fetchWeightClasses = async () => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/weight_classes`);
+    const response = await fetch(`${BACKEND_API_URL}/lifters`);
     const data = await response.json();
-    weightClasses.value = data;
+    lifters.value = data;
   } catch (error) {
-    window.alert("Error fetching weight classes. See console for details.");
-    console.error("Error fetching weight classes:", error);
+    console.error("Error fetching lifters:", error);
   }
 };
 
-const fetchAgeClasses = async () => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/age_classes`);
-    const data = await response.json();
-    ageClasses.value = data;
-  } catch (error) {
-    window.alert("Error fetching age classes. See console for details.");
-    console.error("Error fetching age classes:", error);
-  }
-};
-
-// --- Actions / API Calls ---
-const changeLiftType = async (liftType) => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/meet_state`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ current_lift_type: liftType }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      window.alert(`Failed to change lift type: ${errorData.error || response.statusText}`);
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while changing lift type.");
-    console.error("Error changing lift type:", error);
-  }
-};
-
-const advanceAttempt = async () => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/meet_state/advance_attempt`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}), // Empty body for a POST request that triggers an action
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      window.alert(`Failed to advance attempt: ${errorData.error || response.statusText}`);
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while advancing attempt.");
-    console.error("Error advancing attempt:", error);
-  }
-};
-
+// --- Action Functions ---
 const addLifter = async () => {
   try {
     const response = await fetch(`${BACKEND_API_URL}/lifters`, {
@@ -776,360 +318,165 @@ const addLifter = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newLifter.value),
     });
+    const data = await response.json();
     if (response.ok) {
-      newLifter.value = {
-        name: "",
-        gender: "",
-        lifter_id_number: "",
-        actual_weight: null,
-        birth_date: "",
-        opener_squat: null,
-        opener_bench: null,
-        opener_deadlift: null,
-      };
-      await fetchLifters(); // Refresh lifters after adding
+      showLifterAddMessage("Lifter added successfully!", "success");
+      newLifter.value = { lifter_name: "", lifter_id_number: "" }; // Clear form
+      fetchLifters(); // Refresh list
     } else {
-      const errorData = await response.json();
-      window.alert(`Failed to add lifter: ${errorData.error || response.statusText}`);
+      showLifterAddMessage(data.error || "Failed to add lifter.", "error");
     }
   } catch (error) {
-    window.alert("Network error or unexpected error while adding lifter.");
-    console.error("Error adding lifter:", error);
+    console.error("Network error adding lifter:", error);
+    showLifterAddMessage("Network error adding lifter.", "error");
   }
 };
 
-const setActiveLift = async (liftId) => {
+const deleteLifter = async (id) => {
+  if (confirm("Are you sure you want to delete this lifter?")) { // Use custom modal in future
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/lifters/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        fetchLifters(); // Refresh list
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to delete lifter:", errorData.error);
+        alert(errorData.error || "Failed to delete lifter."); // Use custom modal in future
+      }
+    } catch (error) {
+      console.error("Network error deleting lifter:", error);
+      alert("Network error deleting lifter."); // Use custom modal in future
+    }
+  }
+};
+
+const advanceAttempt = async () => {
   try {
-    const payload = liftId ? { lift_id: liftId } : {};
-    const response = await fetch(`${BACKEND_API_URL}/set_active_lift`, {
+    const response = await fetch(`${BACKEND_API_URL}/meet_state/next_attempt`, {
+      method: "POST",
+    });
+    if (response.ok) {
+      // Backend should emit meet_state_updated and active_lift_changed via Socket.IO
+      // No need to manually refetch here if Socket.IO handles updates
+    } else {
+      const errorData = await response.json();
+      console.error("Failed to advance attempt:", errorData.error);
+      alert(errorData.error || "Failed to advance attempt."); // Use custom modal in future
+    }
+  } catch (error) {
+    console.error("Network error advancing attempt:", error);
+    alert("Network error advancing attempt."); // Use custom modal in future
+  }
+};
+
+const setLiftType = async (liftType) => {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/meet_state/set_lift_type`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ lift_type: liftType }),
     });
-    if (!response.ok) {
+    if (response.ok) {
+      // Backend should emit meet_state_updated and active_lift_changed via Socket.IO
+    } else {
       const errorData = await response.json();
-      window.alert(`Failed to set active lift: ${errorData.error || response.statusText}`);
+      console.error(`Failed to set lift type to ${liftType}:`, errorData.error);
+      alert(errorData.error || `Failed to set lift type to ${liftType}.`); // Use custom modal in future
     }
   } catch (error) {
-    window.alert("Network error or unexpected error while setting active lift.");
-    console.error("Error setting active lift:", error);
+    console.error(`Network error setting lift type to ${liftType}:`, error);
+    alert(`Network error setting lift type to ${liftType}.`); // Use custom modal in future
   }
 };
 
-const addWeightClass = async () => {
+const resetMeet = async () => {
+  if (confirm("Are you sure you want to RESET THE ENTIRE MEET? This cannot be undone!")) { // Use custom modal
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/reset_meet`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        // Handle successful reset, e.g., clear local state, show message
+        alert("Meet successfully reset!"); // Use custom modal
+        // Trigger refetching of all initial data
+        fetchMeetState();
+        fetchCurrentLift();
+        fetchLifters();
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to reset meet:", errorData.error);
+        alert(errorData.error || "Failed to reset meet."); // Use custom modal
+      }
+    } catch (error) {
+      console.error("Network error resetting meet:", error);
+      alert("Network error resetting meet."); // Use custom modal
+    }
+  }
+};
+
+const advanceToNextLift = async () => {
   try {
-    const response = await fetch(`${BACKEND_API_URL}/weight_classes`, {
+    const response = await fetch(`${BACKEND_API_URL}/meet_state/set_active_lift`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newWeightClass.value),
     });
     if (response.ok) {
-      newWeightClass.value = {
-        name: "",
-        min_weight: null,
-        max_weight: null,
-        gender: "",
-      };
-      fetchWeightClasses(); // Refresh list
-      fetchLifters(); // Lifters might be re-assigned, refresh them too
+      // Backend should emit meet_state_updated and active_lift_changed via Socket.IO
     } else {
       const errorData = await response.json();
-      window.alert(`Failed to add weight class: ${errorData.error || response.statusText}`);
+      console.error("Failed to advance to next lift:", errorData.error);
+      alert(errorData.error || "Failed to advance to next lift."); // Use custom modal
     }
   } catch (error) {
-    window.alert("Network error or unexpected error while adding weight class.");
-    console.error("Error adding weight class:", error);
+    console.error("Network error advancing to next lift:", error);
+    alert("Network error advancing to next lift."); // Use custom modal
   }
 };
 
-const deleteWeightClass = async (wcId) => {
-  if (!window.confirm("Are you sure you want to delete this weight class? This cannot be undone if lifters are assigned!")) {
-    return;
-  }
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/weight_classes/${wcId}`, {
-      method: "DELETE",
-    });
-    if (response.ok) {
-      fetchWeightClasses();
-      fetchLifters(); // Lifters might be re-assigned, refresh them too
-    } else {
-      const errorData = await response.json();
-      window.alert(`Failed to delete weight class: ${errorData.error || response.statusText}`);
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while deleting weight class.");
-    console.error("Error deleting weight class:", error);
-  }
-};
-
-const addAgeClass = async () => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/age_classes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newAgeClass.value),
-    });
-    if (response.ok) {
-      newAgeClass.value = { name: "", min_age: null, max_age: null };
-      fetchAgeClasses(); // Refresh list
-      fetchLifters(); // Lifters might be re-assigned, refresh them too
-    } else {
-      const errorData = await response.json();
-      window.alert(`Failed to add age class: ${errorData.error || response.statusText}`);
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while adding age class.");
-    console.error("Error adding age class:", error);
-  }
-};
-
-const deleteAgeClass = async (acId) => {
-  if (!window.confirm("Are you sure you want to delete this age class? This cannot be undone if lifters are assigned!")) {
-    return;
-  }
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/age_classes/${acId}`, {
-      method: "DELETE",
-    });
-    if (response.ok) {
-      fetchAgeClasses();
-      fetchLifters(); // Lifters might be re-assigned, refresh them too
-    } else {
-      const errorData = await response.json();
-      window.alert(`Failed to delete age class: ${errorData.error || response.statusText}`);
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while deleting age class.");
-    console.error("Error deleting age class:", error);
-  }
-};
-
-const addAdditionalWeightClass = async (lifterId, weightClassId) => {
-  if (!weightClassId) return;
-  try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/add_additional_weight_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight_class_id: weightClassId }),
-      }
-    );
-    if (!response.ok) {
-      const errorData = await response.json();
-      window.alert(
-        `Failed to add additional weight class: ${errorData.error || response.statusText}`
-      );
-    } else {
-      fetchLifters(); // Refresh lifter data
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while adding additional weight class.");
-    console.error("Error adding additional weight class:", error);
-  }
-};
-
-const removeAdditionalWeightClass = async (lifterId, weightClassId) => {
-  if (!window.confirm("Are you sure you want to remove this additional weight class?")) {
-    return;
-  }
-  try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/remove_additional_weight_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight_class_id: weightClassId }),
-      }
-    );
-    if (!response.ok) {
-      const errorData = await response.json();
-      window.alert(
-        `Failed to remove additional weight class: ${errorData.error || response.statusText}`
-      );
-    } else {
-      fetchLifters(); // Refresh lifter data
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while removing additional weight class.");
-    console.error("Error removing additional weight class:", error);
-  }
-};
-
-const addAdditionalAgeClass = async (lifterId, ageClassId) => {
-  if (!ageClassId) return;
-  try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/add_additional_age_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age_class_id: ageClassId }),
-      }
-    );
-    if (!response.ok) {
-      const errorData = await response.json();
-      window.alert(`Failed to add additional age class: ${errorData.error || response.statusText}`);
-    } else {
-      fetchLifters(); // Refresh lifter data
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while adding additional age class.");
-    console.error("Error adding additional age class:", error);
-  }
-};
-
-const removeAdditionalAgeClass = async (lifterId, ageClassId) => {
-  if (!window.confirm("Are you sure you want to remove this additional age class?")) {
-    return;
-  }
-  try {
-    const response = await fetch(
-      `${BACKEND_API_URL}/lifters/${lifterId}/remove_additional_age_class`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age_class_id: ageClassId }),
-      }
-    );
-    if (!response.ok) {
-      const errorData = await response.json();
-      window.alert(
-        `Failed to remove additional age class: ${errorData.error || response.statusText}`
-      );
-    } else {
-      fetchLifters(); // Refresh lifter data
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error while removing additional age class.");
-    console.error("Error removing additional age class:", error);
-  }
-};
-
-const exportMeetData = async () => {
-  try {
-    const response = await fetch(`${BACKEND_API_URL}/export_meet_data`);
-    if (response.ok) {
-      window.alert(
-        "Meet data export triggered on backend. Check backend logs for file path."
-      );
-    } else {
-      const errorData = await response.json();
-      window.alert(`Failed to export data: ${errorData.error || response.statusText}`);
-    }
-  } catch (error) {
-    window.alert("Network error or unexpected error during data export.");
-    console.error("Error during data export:", error);
-  }
-};
 
 // --- Socket.IO Event Listeners ---
 onMounted(() => {
+  // Initial fetches
   fetchMeetState();
+  fetchCurrentLift();
   fetchLifters();
-  fetchWeightClasses();
-  fetchAgeClasses();
 
   socket.on("connect", () => {
-    // console.log("Connected to Socket.IO from OrganizerView");
+    console.log("Connected to Socket.IO from OrganizerView");
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Disconnected from Socket.IO in OrganizerView");
   });
 
   socket.on("meet_state_updated", (_data) => {
-    // console.log("Meet state updated via Socket.IO:", _data);
+    console.log("Meet state updated via Socket.IO:", _data);
     meetState.value = _data;
-    fetchCurrentLift(); // Refetch active lift if meet state changes (e.g., attempt or lift type)
-    fetchNextLiftsInQueue(); // Refetch queue
+    fetchCurrentLift(); // Active lift might change with state
+    fetchLifters(); // Lifter list might be affected by reset
   });
 
   socket.on("active_lift_changed", (_data) => {
-    // console.log("Active lift changed via Socket.IO:", _data);
+    console.log("Active lift changed via Socket.IO:", _data);
     currentLift.value = _data;
-    fetchNextLiftsInQueue(); // Active lift changed, so queue might change
   });
 
-  socket.on("lift_updated", (_data) => {
-    // console.log("Lift updated via Socket.IO:", _data);
-    if (currentLift.value && currentLift.value.id === _data.id) {
-      currentLift.value = _data; // Update current active lift if it's the one that changed
-    }
-    fetchNextLiftsInQueue(); // A lift status changed, so queue might need refresh
-  });
-
-  socket.on("lifter_added", () => {
-    // console.log("Lifter added via Socket.IO:");
-    fetchLifters(); // Refresh all lifters
-  });
-
-  socket.on("lifter_updated", () => {
-    // console.log("Lifter updated via Socket.IO:");
-    fetchLifters(); // Refresh all lifters in case primary/additional classes changed
-  });
-
-  socket.on("weight_class_updated", () => {
-    fetchWeightClasses();
-    fetchLifters();
-  });
-
-  socket.on("age_class_updated", () => {
-    fetchAgeClasses();
+  socket.on("lifter_list_updated", () => {
+    console.log("Lifter list updated via Socket.IO.");
     fetchLifters();
   });
 });
 
-// Watcher for meetState changes to ensure nextLiftsInQueue is always relevant
+// Watchers
 watch(meetState, (newMeetState) => {
   if (newMeetState) {
-    fetchNextLiftsInQueue();
+    // Optionally trigger more fetches or logic based on new meet state
   }
 });
 </script>
 
 <style scoped>
-/* Basic Button Styles */
-.btn-primary {
-  @apply bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-300 ease-in-out shadow-md text-base md:text-lg;
-}
-
-.btn-secondary {
-  @apply bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition duration-300 ease-in-out shadow-md text-base md:text-lg;
-}
-
-.btn-success {
-  @apply bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 ease-in-out shadow-md text-base md:text-lg;
-}
-
-.btn-info {
-  @apply bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300 ease-in-out shadow-md text-base md:text-lg;
-}
-
-.btn-danger {
-  @apply bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition duration-300 ease-in-out shadow-md text-base md:text-lg;
-}
-
-.btn-small-primary {
-  @apply bg-indigo-500 text-white py-1 px-2 text-xs md:text-sm rounded-md hover:bg-indigo-600 transition duration-300 ease-in-out;
-}
-
-.btn-small-secondary {
-  @apply bg-gray-500 text-white py-1 px-2 text-xs md:text-sm rounded-md hover:bg-gray-600 transition duration-300 ease-in-out;
-}
-
-.btn-small-danger {
-  @apply bg-red-500 text-white py-1 px-2 text-xs md:text-sm rounded-md hover:bg-red-600 transition duration-300 ease-in-out;
-}
-
-/* Form Input Styles */
-.form-input {
-  @apply p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500;
-}
-
-.form-select {
-  @apply p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white;
-}
-
-/* Badge styles for additional classes */
-.badge-class {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
+/* No custom styles needed beyond Tailwind for this example,
+   but you can add them here if necessary */
 </style>

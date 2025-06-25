@@ -1,34 +1,52 @@
 <template>
-  <div class="judges-view p-6 bg-gray-900 min-h-screen text-white flex flex-col items-center justify-center">
-    <h1 class="text-4xl font-extrabold text-teal-400 mb-8 border-b-4 border-teal-500 pb-2 text-center">
+  <!-- Main container for the Judges View. Added dark background and Inter font. -->
+  <div class="judges-view p-6 bg-gray-950 min-h-screen text-white flex flex-col items-center justify-center font-inter">
+    <!-- Main heading with gradient text for a strong, modern feel -->
+    <h1 class="text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500 mb-8 border-b-4 border-teal-500 pb-2 text-center">
       Judge Panel
     </h1>
 
-    <div v-if="!judgeName" class="login-section bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-      <h2 class="text-2xl font-bold text-teal-300 mb-4">Judge Login</h2>
+    <!-- Login Section Card -->
+    <div v-if="!judgeName" class="login-section bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-700 w-full max-w-md">
+      <h2 class="text-2xl font-bold text-teal-300 mb-4 flex items-center">
+        <svg class="mr-2 h-6 w-6 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+        </svg>
+        Judge Login
+      </h2>
       <input
         type="password"
         v-model="pin"
         placeholder="Enter PIN"
-        class="w-full p-3 mb-4 rounded-md bg-gray-700 text-white border border-gray-600 focus:ring-teal-500 focus:border-teal-500"
+        class="
+          w-full p-3 mb-4 rounded-lg bg-gray-700 text-white border border-gray-600
+          focus:ring-2 focus:ring-teal-500 focus:border-transparent
+          transition duration-200 ease-in-out
+        "
       />
       <button
         @click="login"
-        class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 ease-in-out">
+        class="
+          w-full
+          bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700
+          text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+          transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-teal-500 focus:ring-opacity-50
+        ">
         Login
       </button>
-      <p v-if="loginError" class="text-red-500 mt-3 text-center">{{ loginError }}</p>
+      <p v-if="loginError" class="text-red-400 md:col-span-2 mt-3 text-center">{{ loginError }}</p>
     </div>
 
-    <div v-else class="judge-dashboard bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl">
+    <!-- Judge Dashboard Section Card -->
+    <div v-else class="judge-dashboard bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-700 w-full max-w-2xl">
       <h2 class="text-3xl font-bold text-teal-300 mb-6 text-center">Welcome, {{ judgeName }}!</h2>
       
       <!-- Current Active Lift Display for Judges -->
-      <div v-if="currentLift" class="bg-teal-700 p-6 rounded-md border-2 border-teal-500 text-center mb-6">
+      <div v-if="currentLift" class="bg-indigo-700 p-6 rounded-xl border-2 border-indigo-500 text-center mb-6 shadow-md">
         <p class="text-4xl font-extrabold mb-2 text-white">
           {{ currentLift.lifter_name }}
         </p>
-        <p class="text-2xl text-teal-200 mb-3">
+        <p class="text-2xl text-indigo-200 mb-3">
           ID: {{ currentLift.lifter_id_number }} |
           {{ currentLift.lift_type ? currentLift.lift_type.toUpperCase() : '' }} | Attempt
           {{ currentLift.attempt_number }}
@@ -42,18 +60,28 @@
           <button
             @click="submitScore(true)"
             :disabled="hasScored"
-            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+            class="
+              bg-green-600 hover:bg-green-700 active:bg-green-800
+              text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50
+            ">
             GOOD LIFT
           </button>
           <button
             @click="submitScore(false)"
             :disabled="hasScored"
-            class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+            class="
+              bg-red-600 hover:bg-red-700 active:bg-red-800
+              text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-opacity-50
+            ">
             NO LIFT
           </button>
         </div>
-        <p v-if="hasScored" class="text-green-300 text-xl">Score Submitted!</p>
-        <p v-else-if="scoreError" class="text-red-400 text-xl">{{ scoreError }}</p>
+        <p v-if="hasScored" class="text-green-300 text-xl mt-3">Score Submitted!</p>
+        <p v-else-if="scoreError" class="text-red-400 text-xl mt-3">{{ scoreError }}</p>
       </div>
       <div v-else class="text-gray-500 italic text-2xl text-center">
         No lifter currently active. Waiting for Organizer to set active lift.
@@ -61,7 +89,12 @@
 
       <button
         @click="logout"
-        class="mt-8 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out">
+        class="
+          mt-8
+          bg-gray-700 hover:bg-gray-600 active:bg-gray-700
+          text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300 ease-in-out
+          focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-gray-800
+        ">
         Logout
       </button>
     </div>
@@ -79,10 +112,7 @@ const currentLift = ref(null);
 const scoreError = ref(null);
 const hasScored = ref(false);
 
-// Store the successfully logged-in PIN, as the backend seems to need it for scoring.
-// This is not ideal for security but necessary if backend requires it per request.
 const loggedInPin = ref(localStorage.getItem("loggedInPin") || ""); 
-
 
 const BACKEND_API_URL = "https://powerlifting-meet-system24.onrender.com";
 const SOCKET_IO_URL = "https://powerlifting-meet-system24.onrender.com";
@@ -102,20 +132,19 @@ const login = async () => {
     if (response.ok) {
       judgeName.value = data.judge_id;
       localStorage.setItem("judgeName", data.judge_id);
-      loggedInPin.value = pin.value; // Store the successful PIN
-      localStorage.setItem("loggedInPin", pin.value); // Persist the PIN (use with caution)
-      pin.value = ""; // Clear input field
+      loggedInPin.value = pin.value;
+      localStorage.setItem("loggedInPin", pin.value);
+      pin.value = "";
       fetchCurrentLift();
     } else {
       loginError.value = data.error || "Login failed.";
-      // Important: Clear loggedInPin if login fails
       loggedInPin.value = "";
       localStorage.removeItem("loggedInPin");
     }
   } catch (error) {
     loginError.value = "Network error during login.";
     console.error("Login network error:", error);
-    loggedInPin.value = ""; // Clear on network error too
+    loggedInPin.value = "";
     localStorage.removeItem("loggedInPin");
   }
 };
@@ -123,7 +152,7 @@ const login = async () => {
 const logout = () => {
   judgeName.value = null;
   localStorage.removeItem("judgeName");
-  loggedInPin.value = ""; // Clear stored PIN on logout
+  loggedInPin.value = "";
   localStorage.removeItem("loggedInPin");
   currentLift.value = null;
   hasScored.value = false;
@@ -157,14 +186,13 @@ const checkIfJudgeHasScored = (lift) => {
 
 const submitScore = async (score) => {
   scoreError.value = null;
-  hasScored.value = false; // Optimistically reset
+  hasScored.value = false;
 
   if (!currentLift.value || !judgeName.value) {
     scoreError.value = "No active lift or not logged in.";
     return;
   }
   
-  // Ensure we have a PIN if the backend requires it for scoring
   if (!loggedInPin.value) {
     scoreError.value = "Not logged in or PIN not available. Please re-login.";
     return;
@@ -174,8 +202,7 @@ const submitScore = async (score) => {
     const response = await fetch(`${BACKEND_API_URL}/lifts/${currentLift.value.id}/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Send the stored loggedInPin, NOT the cleared pin.value
-      body: JSON.stringify({ judge_pin: loggedInPin.value, score: score }), // <-- CRITICAL CHANGE HERE
+      body: JSON.stringify({ judge_pin: loggedInPin.value, score: score }),
     });
     const data = await response.json();
     if (response.ok) {
@@ -192,7 +219,6 @@ const submitScore = async (score) => {
 
 // --- Socket.IO Event Listeners ---
 onMounted(() => {
-  // If already logged in (e.g., from localStorage), fetch current lift
   if (judgeName.value) {
     fetchCurrentLift();
   }
